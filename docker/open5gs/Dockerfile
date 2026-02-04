@@ -77,6 +77,13 @@ RUN if [ -z "$NUM_JOBS" ]; then NUM_JOBS=$(nproc); fi && \
     && cd build \
     && ninja install
 
+# On Fedora/RHEL meson installs to lib64; config expects lib/x86_64-linux-gnu/freeDiameter
+RUN if [ -d /open5gs/install/lib64/freeDiameter ]; then \
+      mkdir -p /open5gs/install/lib/x86_64-linux-gnu /open5gs/install/lib/aarch64-linux-gnu && \
+      cp -a /open5gs/install/lib64/freeDiameter /open5gs/install/lib/x86_64-linux-gnu/ && \
+      cp -a /open5gs/install/lib64/freeDiameter /open5gs/install/lib/aarch64-linux-gnu/; \
+    fi
+
 # webgui
 RUN dnf install -y nodejs \
     && cd open5gs/webui \

@@ -9,6 +9,9 @@
 
 set -e # stop executing after error
 
+# Ensure standard paths so aclocal/autoconf/automake are found (e.g. in minimal containers)
+export PATH="/usr/bin:/bin${PATH:+:$PATH}"
+
 main() {
     # Check number of args
     if [ $# -lt 0 ] || [ $# -gt 2 ]; then

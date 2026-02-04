@@ -51,10 +51,9 @@ FROM builder-base AS builder-rohc
 ARG MARCH
 ARG NUM_JOBS
 
-RUN bash /src/docker/scripts/install_rohc_dependencies.sh build
-
-# Compile ROHC
-RUN bash /src/docker/scripts/build_rohc.sh ${MARCH} ${NUM_JOBS}
+# Install ROHC build deps and compile in same RUN so aclocal/automake are on PATH
+RUN bash /src/docker/scripts/install_rohc_dependencies.sh build && \
+    bash /src/docker/scripts/build_rohc.sh ${MARCH} ${NUM_JOBS}
 
 
 

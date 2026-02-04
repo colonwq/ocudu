@@ -11,6 +11,12 @@ set -e # stop executing after error
 
 # Ensure standard paths so aclocal/autoconf/automake are found (e.g. in minimal containers)
 export PATH="/usr/bin:/bin${PATH:+:$PATH}"
+# Force autotools to use system binaries (autogen.sh may not inherit PATH in some environments)
+export ACLOCAL="${ACLOCAL:-/usr/bin/aclocal}"
+export AUTOCONF="${AUTOCONF:-/usr/bin/autoconf}"
+export AUTOMAKE="${AUTOMAKE:-/usr/bin/automake}"
+export AUTOHEADER="${AUTOHEADER:-/usr/bin/autoheader}"
+export LIBTOOLIZE="${LIBTOOLIZE:-/usr/bin/libtoolize}"
 
 main() {
     # Check number of args
@@ -37,7 +43,8 @@ main() {
     tar -xf "${rohc_archive}"
 
     pushd "${rohc_name}-${rohc_version}"
-    ./autogen.sh
+    # Run autogen with explicit PATH so aclocal is found (required in some container environments)
+    env PATH="/usr/bin:/bin${PATH:+:$PATH}" ./autogen.sh
     ./configure --prefix=/opt/rohc
     make all -j"${ncores}"
     make install

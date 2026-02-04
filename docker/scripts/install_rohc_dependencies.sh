@@ -33,6 +33,13 @@ main() {
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
             : # noop, nothing needed
         fi
+    elif [[ "$ID" == "fedora" || "$ID" == "rhel" ]]; then
+        if [[ "$mode" == "all" || "$mode" == "build" ]]; then
+            dnf -y install curl ca-certificates gcc-c++ make xz autoconf automake libtool libpcap-devel cmocka-devel
+        fi
+        if [[ "$mode" == "all" || "$mode" == "run" ]]; then
+            : # noop, nothing needed
+        fi
     else
         echo "OS $ID not supported"
         exit 1

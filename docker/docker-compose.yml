@@ -13,7 +13,7 @@ services:
       context: open5gs
       target: open5gs
       args:
-        OS_VERSION: "22.04"
+        OS_VERSION: "43"
         OPEN5GS_VERSION: "v2.7.0"
     env_file:
       - ${OPEN_5GS_ENV_FILE:-open5gs/open5gs.env}
@@ -41,7 +41,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        OS_VERSION: "24.04"
+        OS_VERSION: "43"
     # privileged mode is requred only for accessing usb devices
     privileged: true
     # Extra capabilities always required

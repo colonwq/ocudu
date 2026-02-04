@@ -8,14 +8,14 @@
 
 # Build args
 ################
-# OS_VERSION            Ubuntu OS version
+# OS_VERSION            Fedora OS version (e.g. 43)
 # UHD_VERSION           UHD version number
 # DPDK_VERSION          DPDK version number
 # MARCH                 gcc/clang compatible arch
 # NUM_JOBS              Number or empty for all
 # EXTRA_CMAKE_ARGS      Extra flags for OCUDU
 
-ARG OS_VERSION=24.04
+ARG OS_VERSION=43
 ARG UHD_VERSION=4.7.0.0
 ARG DPDK_VERSION=24.11.2
 ARG MARCH=native
@@ -25,7 +25,7 @@ ARG NUM_JOBS=""
 # Stage 1: Build #
 ##################
 
-FROM ubuntu:$OS_VERSION AS builder-base
+FROM fedora:${OS_VERSION} AS builder-base
 
 # Adding the complete repo to the context, in /src folder
 ADD . /src
@@ -104,7 +104,7 @@ RUN cp /src/build/apps/cu/ocu             /tmp/ocu                     && \
 # Stage 2: Run #
 ################
 
-FROM ubuntu:$OS_VERSION AS runtime
+FROM fedora:${OS_VERSION} AS runtime
 
 ARG UHD_VERSION
 ARG DPDK_VERSION
@@ -133,8 +133,12 @@ RUN bash /usr/local/etc/install_ocudu_dependencies.sh run && \
     bash /usr/local/etc/install_rohc_dependencies.sh run && \
     bash /usr/local/etc/install_uhd_dependencies.sh run && \
     bash /usr/local/etc/install_dpdk_dependencies.sh run && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ntpdate && \
-    apt-get autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*
+    ( . /etc/os-release && \
+      if [ "$ID" = "fedora" ] || [ "$ID" = "rhel" ]; then \
+        dnf install -y curl ntpdate && dnf clean all; \
+      else \
+        DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends curl ntpdate && apt-get autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*; \
+      fi )
 
 #########################################################
 # Stage 3: Generate container SPDX and merge build SPDX #

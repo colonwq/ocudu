@@ -46,7 +46,7 @@ main() {
                 python3-mako python3-numpy python3-setuptools python3-requests
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            dnf -y install inetutils boost-devel ncurses-devel libusb1 libusb1-devel python3-requests uhd uhd-devel
+            dnf -y install boost-devel ncurses-devel libusb1 libusb1-devel python3-requests uhd uhd-devel
             uhd_images_downloader
         fi
     else

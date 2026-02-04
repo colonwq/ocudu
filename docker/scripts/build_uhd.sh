@@ -24,10 +24,14 @@ main() {
     cd /tmp
     curl -L "https://github.com/EttusResearch/uhd/archive/refs/tags/v${uhd_version}.tar.gz" | tar xzf -
 
-    # Fix ref_clk_calibration_iface.hpp: add missing #include <cstdint> for uint32_t (GCC 15+)
+    # Add missing #include <cstdint> to headers that use uint32_t etc. (GCC 15+ on Fedora 43)
     UHD_TOP=$(ls -d /tmp/uhd-*"${uhd_version}"* 2>/dev/null | head -1)
-    if [ -n "$UHD_TOP" ] && [ -f "${UHD_TOP}/host/include/uhd/features/ref_clk_calibration_iface.hpp" ]; then
-        sed -i '1i #include <cstdint>' "${UHD_TOP}/host/include/uhd/features/ref_clk_calibration_iface.hpp"
+    if [ -n "$UHD_TOP" ] && [ -d "${UHD_TOP}/host" ]; then
+        find "${UHD_TOP}/host" \( -name '*.hpp' -o -name '*.h' \) -print0 | while IFS= read -r -d '' f; do
+            if grep -qE 'uint32_t|uint16_t|uint8_t|int32_t' "$f" && ! grep -q '<cstdint>' "$f"; then
+                sed -i '1i #include <cstdint>' "$f"
+            fi
+        done
     fi
 
     cd uhd*"${uhd_version}"/host && mkdir -p build && cd build

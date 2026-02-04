@@ -2,7 +2,14 @@
 
 import click
 import ipaddress
-import iptc
+import subprocess
+import sys
+
+try:
+    import iptc
+except ImportError:
+    iptc = None
+
 from pyroute2 import IPRoute
 from pyroute2.netlink import NetlinkError
 
@@ -15,23 +22,98 @@ def handle_ip_string(ctx, param, value):
         raise click.BadParameter(f'{value} is not a valid IP range.')
 
 
-def iptables_add_masquerade(if_name, ip_range):
-    chain = iptc.Chain(iptc.Table(iptc.Table.NAT), "POSTROUTING")
-    rule = iptc.Rule()
-    rule.src = ip_range
-    rule.out_interface = if_name
-    target = iptc.Target(rule, "MASQUERADE")
-    rule.target = target
-    chain.insert_rule(rule)
+def _iptables_add_masquerade(if_name, ip_range):
+    """Return True if the rule was added, False otherwise."""
+    if iptc is None:
+        return False
+    try:
+        chain = iptc.Chain(iptc.Table(iptc.Table.NAT), "POSTROUTING")
+        rule = iptc.Rule()
+        rule.src = ip_range
+        rule.out_interface = if_name
+        target = iptc.Target(rule, "MASQUERADE")
+        rule.target = target
+        chain.insert_rule(rule)
+        return True
+    except Exception:
+        return False
 
 
-def iptables_allow_all(if_name):
-    chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), "INPUT")
-    rule = iptc.Rule()
-    rule.in_interface = if_name
-    target = iptc.Target(rule, "ACCEPT")
-    rule.target = target
-    chain.insert_rule(rule)
+def _iptables_allow_all(if_name):
+    """Return True if the rule was added, False otherwise."""
+    if iptc is None:
+        return False
+    try:
+        chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), "INPUT")
+        rule = iptc.Rule()
+        rule.in_interface = if_name
+        target = iptc.Target(rule, "ACCEPT")
+        rule.target = target
+        chain.insert_rule(rule)
+        return True
+    except Exception:
+        return False
+
+
+def _firewall_cmd_add_masquerade(ip_range):
+    """Return True if the rule was added, False otherwise."""
+    try:
+        r = subprocess.run(
+            [
+                "firewall-cmd",
+                "--permanent",
+                "--add-rich-rule",
+                f'rule family=ipv4 source address={ip_range} masquerade',
+            ],
+            capture_output=True,
+            timeout=10,
+        )
+        if r.returncode != 0:
+            return False
+        r = subprocess.run(["firewall-cmd", "--reload"], capture_output=True, timeout=10)
+        return r.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+        return False
+
+
+def _firewall_cmd_allow_interface(if_name):
+    """Return True if the rule was added, False otherwise."""
+    try:
+        r = subprocess.run(
+            [
+                "firewall-cmd",
+                "--permanent",
+                "--add-rich-rule",
+                f'rule family=ipv4 interface name={if_name} accept',
+            ],
+            capture_output=True,
+            timeout=10,
+        )
+        if r.returncode != 0:
+            return False
+        r = subprocess.run(["firewall-cmd", "--reload"], capture_output=True, timeout=10)
+        return r.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+        return False
+
+
+def setup_firewall_rules(if_name, ip_range_str):
+    """Try iptables first, then firewall-cmd. Return (masquerade_ok, allow_ok)."""
+    masq_ok = _iptables_add_masquerade(if_name, ip_range_str)
+    if not masq_ok:
+        masq_ok = _firewall_cmd_add_masquerade(ip_range_str)
+
+    allow_ok = _iptables_allow_all(if_name)
+    if not allow_ok:
+        allow_ok = _firewall_cmd_allow_interface(if_name)
+
+    if not masq_ok or not allow_ok:
+        print(
+            "CRITICAL: Could not add firewall rules (tried iptables and firewall-cmd). "
+            "NAT/forwarding for the TUN interface may not work; TUN and routing are still set up.",
+            file=sys.stderr,
+        )
+    return masq_ok, allow_ok
 
 
 @click.command()
@@ -67,12 +149,9 @@ def main(if_name, ip_range):
         except NetlinkError:
             pass
 
-        # setup iptables
-        iptables_add_masquerade(if_name, ip_range.with_prefixlen)
-        iptables_allow_all(if_name)
-        # 'iptables -t nat -A POSTROUTING -s ' + ip_range.with_prefixlen + ' ! -o ' + if_name + ' -j MASQUERADE'
-
-        # 'iptables -A INPUT -i ' + if_name + ' -j ACCEPT'
+        # Setup firewall once (same rules apply for all subnets): try iptables, then firewall-cmd
+        if subnet == 0:
+            setup_firewall_rules(if_name, ip_range.with_prefixlen)
 
 
 if __name__ == "__main__":

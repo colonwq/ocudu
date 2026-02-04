@@ -51,9 +51,8 @@ services:
     volumes:
       # Access USB to use some SDRs
       - /dev/bus/usb/:/dev/bus/usb/
-      # Sharing images between the host and the pod.
-      # It's also possible to download the images inside the pod
-      - /usr/share/uhd/images:/usr/share/uhd/images
+      # UHD device images (named volume so path exists; override with host path if you have UHD installed, e.g. - /usr/share/uhd/images:/usr/share/uhd/images)
+      - uhd-images:/usr/share/uhd/images
       # Save logs and more into gnb-storage
       - gnb-storage:/tmp
     # It creates a file/folder into /config_name inside the container
@@ -94,6 +93,7 @@ configs:
 
 volumes:
   gnb-storage:
+  uhd-images:
 
 networks:
   ran:

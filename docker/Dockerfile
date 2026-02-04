@@ -125,6 +125,9 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/uhd/${UHD_VERSION}/lib/:/opt/uhd/${UHD
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/dpdk/${DPDK_VERSION}/lib/:/opt/dpdk/${DPDK_VERSION}/lib/x86_64-linux-gnu/:/opt/dpdk/${DPDK_VERSION}/lib/aarch64-linux-gnu/
 ENV PATH=$PATH:/opt/uhd/${UHD_VERSION}/bin/:/opt/dpdk/${DPDK_VERSION}/bin/
 
+# Ensure UHD images directory exists (bind-mount from host can override)
+RUN mkdir -p /usr/share/uhd/images
+
 # Install ocudu and lib runtime dependencies
 RUN bash /usr/local/etc/install_ocudu_dependencies.sh run && \
     bash /usr/local/etc/install_rohc_dependencies.sh run && \
@@ -137,7 +140,7 @@ RUN bash /usr/local/etc/install_ocudu_dependencies.sh run && \
 # Stage 3: Generate container SPDX and merge build SPDX #
 #########################################################
 
-FROM anchore/syft:v1.26.1 AS syft-bin
+FROM docker.io/anchore/syft:v1.26.1 AS syft-bin
 FROM python:3.11.3-alpine AS spdx-merger
 COPY --from=syft-bin  /syft                      /syft
 COPY --from=runtime   /                          /rootfs

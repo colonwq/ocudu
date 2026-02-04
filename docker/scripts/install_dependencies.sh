@@ -94,7 +94,7 @@ main() {
 
     elif [[ "$ID" == "rhel" ]]; then
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            dnf -y install cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel
+            dnf -y install cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel which
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
             dnf -y install fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gcc-toolset-12-libatomic-devel
@@ -105,7 +105,7 @@ main() {
 
     elif [[ "$ID" == "fedora" ]]; then
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            dnf -y install cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel
+            dnf -y install cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel which
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
             dnf -y install fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel

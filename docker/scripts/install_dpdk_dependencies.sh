@@ -39,11 +39,11 @@ main() {
     elif [[ "$ID" == "fedora" || "$ID" == "rhel" ]]; then
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
             dnf -y install ninja-build gcc-c++ git pkg-config numactl-devel libfdt-devel pciutils python3-pip
-            pip3 install meson pyelftools || pip3 install --break-system-packages meson pyelftools
+            python3 -m pip install meson pyelftools || python3 -m pip install --break-system-packages meson pyelftools
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            dnf -y install numactl-devel pciutils libfdt-devel libatomic iproute
-            pip3 install pyelftools || pip3 install --break-system-packages pyelftools
+            dnf -y install numactl-devel pciutils libfdt-devel libatomic iproute python3-pip
+            python3 -m pip install pyelftools || python3 -m pip install --break-system-packages pyelftools
         fi
     else
         echo "OS $ID not supported"

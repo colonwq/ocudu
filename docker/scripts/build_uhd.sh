@@ -24,6 +24,12 @@ main() {
     cd /tmp
     curl -L "https://github.com/EttusResearch/uhd/archive/refs/tags/v${uhd_version}.tar.gz" | tar xzf -
 
+    # Fix ref_clk_calibration_iface.hpp: add missing #include <cstdint> for uint32_t (GCC 15+)
+    UHD_TOP=$(ls -d /tmp/uhd-*"${uhd_version}"* 2>/dev/null | head -1)
+    if [ -n "$UHD_TOP" ] && [ -f "${UHD_TOP}/host/include/uhd/features/ref_clk_calibration_iface.hpp" ]; then
+        sed -i '1i #include <cstdint>' "${UHD_TOP}/host/include/uhd/features/ref_clk_calibration_iface.hpp"
+    fi
+
     cd uhd*"${uhd_version}"/host && mkdir -p build && cd build
     cmake \
         -DCMAKE_INSTALL_PREFIX=/opt/uhd/"${uhd_version}" \

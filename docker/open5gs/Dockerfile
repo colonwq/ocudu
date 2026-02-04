@@ -6,60 +6,60 @@
 # the distribution.
 #
 
-ARG OS_VERSION=22.04
-FROM ubuntu:$OS_VERSION AS base
+ARG OS_VERSION=43
+FROM fedora:${OS_VERSION} AS base
 
 ENV PYTHONBUFFERED=1
-ENV DEBIAN_FRONTEND=noninteractive
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && apt install -y software-properties-common \
-    && rm -rf /var/lib/apt/lists/*
+RUN dnf install -y dnf-plugins-core \
+    && dnf clean all
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && apt-get install -y \
+RUN dnf install -y \
     python3-pip \
     python3-setuptools \
     python3-wheel \
     ninja-build \
-    build-essential \
+    gcc \
+    gcc-c++ \
+    make \
     flex \
     bison \
     git \
-    libsctp-dev \
-    libgnutls28-dev \
-    libgcrypt-dev \
-    libssl-dev \
-    libidn11-dev \
-    libmongoc-dev \
-    libbson-dev \
-    libyaml-dev \
-    libnghttp2-dev \
-    libmicrohttpd-dev \
-    libcurl4-gnutls-dev \
-    libnghttp2-dev \
-    libtins-dev \
+    lksctp-tools-devel \
+    gnutls-devel \
+    libgcrypt-devel \
+    openssl-devel \
+    libidn-devel \
+    mongo-c-driver-devel \
+    libyaml-devel \
+    libnghttp2-devel \
+    libmicrohttpd-devel \
+    libcurl-devel \
+    libtins-devel \
     meson \
     curl \
     gettext \
     gdb \
-    iproute2 \
+    iproute \
     iptables \
-    iputils-ping \
-    netcat-openbsd \
-    iperf \
+    iputils \
+    nmap-ncat \
     iperf3 \
-    libtalloc-dev \
+    libtalloc-devel \
     cmake \
-    && rm -rf /var/lib/apt/lists/*
+    && dnf clean all
 
 ARG MONGO_MAJOR_VERSION=6
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends wget gnupg \
-    && wget -qO - https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc | apt-key add \
-    && . /etc/os-release \
-    && echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $UBUNTU_CODENAME/mongodb-org/${MONGO_MAJOR_VERSION}.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-${MONGO_MAJOR_VERSION}.0.list \
-    && DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends mongodb-org \
-    && apt-get autoremove && apt-get clean
+RUN dnf install -y wget \
+    && wget -qO /etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc \
+    && echo "[mongodb-org-${MONGO_MAJOR_VERSION}.0]" > /etc/yum.repos.d/mongodb-org.repo \
+    && echo "name=MongoDB Repository" >> /etc/yum.repos.d/mongodb-org.repo \
+    && echo "baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/${MONGO_MAJOR_VERSION}.0/x86_64/" >> /etc/yum.repos.d/mongodb-org.repo \
+    && echo "gpgcheck=1" >> /etc/yum.repos.d/mongodb-org.repo \
+    && echo "enabled=1" >> /etc/yum.repos.d/mongodb-org.repo \
+    && echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb" >> /etc/yum.repos.d/mongodb-org.repo \
+    && dnf install -y mongodb-org \
+    && dnf clean all
 
 # To set a fixed version of open5gs use
 ARG OPEN5GS_VERSION=v2.7.5
@@ -78,9 +78,7 @@ RUN if [ -z "$NUM_JOBS" ]; then NUM_JOBS=$(nproc); fi && \
     && ninja install
 
 # webgui
-ARG NODE_MAJOR=20
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
-    && apt-get install -y nodejs \
+RUN dnf install -y nodejs \
     && cd open5gs/webui \
     && npm ci --no-optional
 

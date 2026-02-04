@@ -34,10 +34,15 @@ ADD . /src
 # RUN git clone https://github.com/ocudu/OCUDU_Project.git /src
 
 # Install OCUDU build dependencies
-RUN /src/docker/scripts/install_dependencies.sh build && \
-    /src/docker/scripts/install_uhd_dependencies.sh build && \
-    /src/docker/scripts/install_dpdk_dependencies.sh build && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git clang
+RUN bash /src/docker/scripts/install_dependencies.sh build && \
+    bash /src/docker/scripts/install_uhd_dependencies.sh build && \
+    bash /src/docker/scripts/install_dpdk_dependencies.sh build && \
+    ( . /etc/os-release && \
+      if [ "$ID" = "fedora" ] || [ "$ID" = "rhel" ]; then \
+        dnf install -y git clang; \
+      else \
+        DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends git clang; \
+      fi )
 
 
 
@@ -46,10 +51,10 @@ FROM builder-base AS builder-rohc
 ARG MARCH
 ARG NUM_JOBS
 
-RUN /src/docker/scripts/install_rohc_dependencies.sh build
+RUN bash /src/docker/scripts/install_rohc_dependencies.sh build
 
 # Compile ROHC
-RUN /src/docker/scripts/build_rohc.sh ${MARCH} ${NUM_JOBS}
+RUN bash /src/docker/scripts/build_rohc.sh ${MARCH} ${NUM_JOBS}
 
 
 
@@ -64,8 +69,8 @@ ARG NUM_JOBS
 COPY --from=builder-rohc /opt/rohc /opt/rohc
 
 # Compile UHD/DPDK
-RUN /src/docker/scripts/build_uhd.sh "${UHD_VERSION}" ${MARCH} ${NUM_JOBS} && \
-    /src/docker/scripts/build_dpdk.sh "${DPDK_VERSION}" ${MARCH} ${NUM_JOBS}
+RUN bash /src/docker/scripts/build_uhd.sh "${UHD_VERSION}" ${MARCH} ${NUM_JOBS} && \
+    bash /src/docker/scripts/build_dpdk.sh "${DPDK_VERSION}" ${MARCH} ${NUM_JOBS}
 
 # Compile OCUDU and install it in the OS
 ARG COMPILER=gcc
@@ -75,7 +80,7 @@ ENV UHD_DIR=/opt/uhd/${UHD_VERSION}
 ENV DPDK_DIR=/opt/dpdk/${DPDK_VERSION}
 RUN if [ -z "$NUM_JOBS" ]; then NUM_JOBS=$(nproc); fi \
     && \
-    /src/docker/scripts/builder.sh -c ${COMPILER} -m "-j${NUM_JOBS} ocu odu odu_split_8 odu_split_7_2 gnb gnb_split_8 gnb_split_7_2 ru_emulator" \
+    bash /src/docker/scripts/builder.sh -c ${COMPILER} -m "-j${NUM_JOBS} ocu odu odu_split_8 odu_split_7_2 gnb gnb_split_8 gnb_split_7_2 ru_emulator" \
     -DBUILD_TESTING=False -DENABLE_UHD=On -DENABLE_DPDK=On -DMARCH=${MARCH} -DCMAKE_INSTALL_PREFIX=/opt/srs \
     ${EXTRA_CMAKE_ARGS} /src
 RUN cp /src/build/apps/cu/ocu             /tmp/ocu                     && \
@@ -121,10 +126,10 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/dpdk/${DPDK_VERSION}/lib/:/opt/dpdk/${
 ENV PATH=$PATH:/opt/uhd/${UHD_VERSION}/bin/:/opt/dpdk/${DPDK_VERSION}/bin/
 
 # Install ocudu and lib runtime dependencies
-RUN /usr/local/etc/install_ocudu_dependencies.sh run && \
-    /usr/local/etc/install_rohc_dependencies.sh run && \
-    /usr/local/etc/install_uhd_dependencies.sh run && \
-    /usr/local/etc/install_dpdk_dependencies.sh run && \
+RUN bash /usr/local/etc/install_ocudu_dependencies.sh run && \
+    bash /usr/local/etc/install_rohc_dependencies.sh run && \
+    bash /usr/local/etc/install_uhd_dependencies.sh run && \
+    bash /usr/local/etc/install_dpdk_dependencies.sh run && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ntpdate && \
     apt-get autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*
 

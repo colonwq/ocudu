@@ -40,6 +40,15 @@ main() {
                 apt-get autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*
             uhd_images_downloader
         fi
+    elif [[ "$ID" == "fedora" || "$ID" == "rhel" ]]; then
+        if [[ "$mode" == "all" || "$mode" == "build" ]]; then
+            dnf -y install cmake gcc-c++ pkg-config boost-devel libusb1-devel \
+                python3-mako python3-numpy python3-setuptools python3-requests
+        fi
+        if [[ "$mode" == "all" || "$mode" == "run" ]]; then
+            dnf -y install inetutils boost-devel ncurses-devel libusb1 libusb1-devel python3-requests uhd uhd-devel
+            uhd_images_downloader
+        fi
     else
         echo "OS $ID not supported"
         exit 1

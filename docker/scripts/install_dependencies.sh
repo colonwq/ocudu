@@ -38,12 +38,12 @@ main() {
     if [[ "$ID" == "debian" || "$ID" == "ubuntu" ]]; then
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
             DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-                cmake make gcc g++ pkg-config libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev && \
+                clang cmake gcc g++ git make pkg-config libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev && \
                 apt-get clean && rm -rf /var/lib/apt/lists/*
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
             DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-                libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev && \
+                curl libfftw3-dev libmbedtls-dev libsctp-dev libyaml-cpp-dev libgtest-dev ntpdate && \
                 apt-get clean && rm -rf /var/lib/apt/lists/*
         fi
         if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
@@ -95,31 +95,31 @@ main() {
     elif [[ "$ID" == "rhel" ]]; then
         packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            packages+=(cmake fftw-devel gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
+            packages+=(clang cmake fftw-devel gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel git lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            packages+=(fftw-devel gcc-toolset-12-libatomic-devel lksctp-tools-devel mbedtls-devel yaml-cpp-devel)
+            packages+=(curl fftw-devel gcc-toolset-12-libatomic-devel lksctp-tools-devel mbedtls-devel ntpdate yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
             packages+=(boost-devel cppzmq-devel libusb1-devel numactl-devel)
         fi
         if [[ ${#packages[@]} -gt 0 ]]; then
-            dnf -y install "${packages[@]}"
+            dnf -y install "${packages[@]}" && dnf clean all
         fi
 
     elif [[ "$ID" == "fedora" ]]; then
         packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            packages+=(cmake fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
+            packages+=(clang cmake fftw-devel git gtest-devel lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            packages+=(fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel yaml-cpp-devel)
+            packages+=(curl fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel ntpdate yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
             packages+=(boost-devel cppzmq-devel libusb1-devel numactl-devel)
         fi
         if [[ ${#packages[@]} -gt 0 ]]; then
-            dnf -y install "${packages[@]}"
+            dnf -y install "${packages[@]}" && dnf clean all
         fi
 
     else

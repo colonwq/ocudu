@@ -51,7 +51,7 @@ main() {
     ldconfig
     popd
     
-    rm -Rf /tmp/rohc-"${rohc_version}"*
+    rm -Rf /tmp/"${rohc_name}-${rohc_version}"*
 
 }
 

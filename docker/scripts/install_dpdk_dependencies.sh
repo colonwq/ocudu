@@ -37,13 +37,25 @@ main() {
             pip3 install pyelftools || pip3 install --break-system-packages pyelftools
         fi
     elif [[ "$ID" == "fedora" || "$ID" == "rhel" ]]; then
+        packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            dnf -y install ninja-build gcc-c++ git pkg-config numactl-devel libfdt-devel pciutils python3-pip
-            python3 -m pip install meson pyelftools || python3 -m pip install --break-system-packages meson pyelftools
+            packages+=(gcc-c++ git libfdt-devel ninja-build numactl-devel pciutils pkg-config python3-pip)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            dnf -y install numactl-devel pciutils libfdt-devel libatomic iproute python3-pip
-            python3 -m pip install pyelftools || python3 -m pip install --break-system-packages pyelftools
+            packages+=(iproute libatomic libfdt-devel numactl-devel pciutils python3-pip)
+        fi
+        if [[ ${#packages[@]} -gt 0 ]]; then
+            dnf -y install "${packages[@]}"
+        fi
+        pip_modules=()
+        if [[ "$mode" == "all" || "$mode" == "build" ]]; then
+            pip_modules+=(meson pyelftools)
+        fi
+        if [[ "$mode" == "all" || "$mode" == "run" ]]; then
+            pip_modules+=(pyelftools)
+        fi
+        if [[ ${#pip_modules[@]} -gt 0 ]]; then
+            pip install "${pip_modules[@]}" || pip install --break-system-packages "${pip_modules[@]}"
         fi
     else
         echo "OS $ID not supported"

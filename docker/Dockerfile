@@ -36,13 +36,7 @@ ADD . /src
 # Install OCUDU build dependencies
 RUN bash /src/docker/scripts/install_dependencies.sh build && \
     bash /src/docker/scripts/install_uhd_dependencies.sh build && \
-    bash /src/docker/scripts/install_dpdk_dependencies.sh build && \
-    ( . /etc/os-release && \
-      if [ "$ID" = "fedora" ] || [ "$ID" = "rhel" ]; then \
-        dnf install -y git clang; \
-      else \
-        DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends git clang; \
-      fi )
+    bash /src/docker/scripts/install_dpdk_dependencies.sh build
 
 
 
@@ -131,13 +125,7 @@ RUN mkdir -p /usr/share/uhd/images
 RUN bash /usr/local/etc/install_ocudu_dependencies.sh run && \
     bash /usr/local/etc/install_rohc_dependencies.sh run && \
     bash /usr/local/etc/install_uhd_dependencies.sh run && \
-    bash /usr/local/etc/install_dpdk_dependencies.sh run && \
-    ( . /etc/os-release && \
-      if [ "$ID" = "fedora" ] || [ "$ID" = "rhel" ]; then \
-        dnf install -y curl ntpdate && dnf clean all; \
-      else \
-        DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends curl ntpdate && apt-get autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*; \
-      fi )
+    bash /usr/local/etc/install_dpdk_dependencies.sh run
 
 #########################################################
 # Stage 3: Generate container SPDX and merge build SPDX #

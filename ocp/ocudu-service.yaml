@@ -1,0 +1,244 @@
+#
+# OpenShift/Kubernetes manifest for OCUDU 5GC and gNB services.
+# Based on docker/docker-compose.yml. Deploy with: oc apply -f ocp/ocudu-service.yaml
+#
+# Images:
+#   - 5GC: quay.io/kschinck/docker_5gc:20260205
+#   - gNB: quay.io/kschinck/gnb:20260205
+#
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ocudu
+  labels:
+    name: ocudu
+---
+# 5GC environment (MongoDB, UE subnet, etc.). MONGODB_IP is localhost inside the 5gc pod.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fivegc-env
+  namespace: ocudu
+data:
+  MONGODB_IP: "127.0.0.1"
+  OPEN5GS_IP: "10.53.1.2"
+  UE_IP_BASE: "10.45.0"
+  UPF_ADVERTISE_IP: "10.53.1.2"
+  DEBUG: "false"
+  SUBSCRIBER_DB: "001010123456780,00112233445566778899aabbccddeeff,opc,63bfa50ee6523365ff14c1f45f88737d,8000,9,10.45.1.2"
+  NETWORK_NAME_FULL: "OCUDU"
+  NETWORK_NAME_SHORT: "OCUDU"
+  TZ: "Europe/Madrid"
+---
+# gNB compose overlay: AMF address set to 5gc service (in-cluster DNS)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gnb-compose-config
+  namespace: ocudu
+data:
+  gnb_compose_config.yml: |
+    cu_cp:
+      amf:
+        addrs: 5gc
+        bind_addrs: 0.0.0.0
+    metrics:
+      autostart_stdout_metrics: true
+      enable_json: true
+    remote_control:
+      bind_addr: 0.0.0.0
+      enabled: true
+---
+# Default gNB cell config (B200 TDD n78 20MHz). Replace with your own ConfigMap if needed.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gnb-config
+  namespace: ocudu
+data:
+  gnb_config.yml: |
+    cu_cp:
+      amf:
+        addrs: 127.0.1.100
+        port: 38412
+        bind_addrs: 127.0.0.1
+        supported_tracking_areas:
+          - tac: 7
+            plmn_list:
+              - plmn: "00101"
+                tai_slice_support_list:
+                  - sst: 1
+    ru_sdr:
+      device_driver: uhd
+      device_args: type=b200,num_recv_frames=64,num_send_frames=64
+      srate: 23.04
+      otw_format: sc12
+      tx_gain: 80
+      rx_gain: 40
+    cell_cfg:
+      dl_arfcn: 632628
+      band: 78
+      channel_bandwidth_MHz: 20
+      common_scs: 30
+      plmn: "00101"
+      tac: 7
+      pci: 1
+    log:
+      filename: /tmp/gnb.log
+      all_level: warning
+    pcap:
+      mac_enable: false
+      mac_filename: /tmp/gnb_mac.pcap
+      ngap_enable: false
+      ngap_filename: /tmp/gnb_ngap.pcap
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: 5gc
+  namespace: ocudu
+  labels:
+    app: 5gc
+spec:
+  ports:
+    - name: web
+      port: 9999
+      targetPort: 9999
+      protocol: TCP
+  selector:
+    app: 5gc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb
+  namespace: ocudu
+  labels:
+    app: gnb
+spec:
+  ports:
+    - name: metrics
+      port: 8001
+      targetPort: 8001
+      protocol: TCP
+  selector:
+    app: gnb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 5gc
+  namespace: ocudu
+  labels:
+    app: 5gc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 5gc
+  template:
+    metadata:
+      labels:
+        app: 5gc
+    spec:
+      containers:
+        - name: 5gc
+          image: quay.io/kschinck/docker_5gc:20260205
+          command: ["5gc", "-c", "open5gs-5gc.yml"]
+          ports:
+            - containerPort: 9999
+              name: web
+          envFrom:
+            - configMapRef:
+                name: fivegc-env
+          livenessProbe:
+            exec:
+              command: ["nc", "-z", "127.0.0.20", "7777"]
+            initialDelaySeconds: 30
+            periodSeconds: 3
+            timeoutSeconds: 1
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["nc", "-z", "127.0.0.20", "7777"]
+            initialDelaySeconds: 10
+            periodSeconds: 3
+            timeoutSeconds: 1
+            failureThreshold: 60
+          securityContext:
+            privileged: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb
+  namespace: ocudu
+  labels:
+    app: gnb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb
+  template:
+    metadata:
+      labels:
+        app: gnb
+    spec:
+      containers:
+        - name: gnb
+          image: quay.io/kschinck/gnb:20260205
+          command: ["gnb", "-c", "/gnb_config/gnb_config.yml", "-c", "/gnb_compose_config/gnb_compose_config.yml"]
+          ports:
+            - containerPort: 8001
+              name: metrics
+          env:
+            - name: OPEN5GS_IP
+              value: "5gc"
+            - name: GNB_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: gnb-config
+              mountPath: /gnb_config
+              readOnly: true
+            - name: gnb-compose-config
+              mountPath: /gnb_compose_config
+              readOnly: true
+          livenessProbe:
+            tcpSocket:
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          securityContext:
+            capabilities:
+              add: ["SYS_NICE", "SYS_PTRACE"]
+      volumes:
+        - name: gnb-config
+          configMap:
+            name: gnb-config
+        - name: gnb-compose-config
+          configMap:
+            name: gnb-compose-config
+---
+# Optional: expose 5GC web UI externally (uncomment and adjust as needed)
+# apiVersion: route.openshift.io/v1
+# kind: Route
+# metadata:
+#   name: 5gc-web
+#   namespace: ocudu
+# spec:
+#   to:
+#     kind: Service
+#     name: 5gc
+#   port:
+#     targetPort: web
+#   tls:
+#     termination: edge

@@ -55,11 +55,9 @@ services:
       - uhd-images:/usr/share/uhd/images
       # Save logs and more into gnb-storage
       - gnb-storage:/tmp
-    # It creates a file/folder into /config_name inside the container
-    # Its content would be the value of the file used to create the config
-    configs:
-      - gnb_config.yml
-      - gnb_compose_config.yml
+      # Config files (volume mounts work with podman-compose; configs: may not mount at expected paths)
+      - ${GNB_CONFIG_PATH:-../configs/gnb_rf_b200_tdd_n78_20mhz.yml}:/gnb_config.yml:ro
+      - docker/gnb_compose_config.yml:/gnb_compose_config.yml:ro
     # Customize your desired network mode.
     # current netowrk configuration creastes a private netwoek with both containers attached
     # An alterantive would be `network: host"`. That would expose your host network into the container. It's the easiest to use if the 5gc is not in your PC
@@ -74,22 +72,6 @@ services:
         condition: service_healthy
     # Command to run into the final container
     command: gnb -c /gnb_config.yml -c /gnb_compose_config.yml
-
-configs:
-  gnb_config.yml:
-    file: ${GNB_CONFIG_PATH:-../configs/gnb_rf_b200_tdd_n78_20mhz.yml} # Path to your desired config file
-  gnb_compose_config.yml:
-    content: |
-      cu_cp:
-        amf:
-          addrs: ${OPEN5GS_IP:-10.53.1.2}
-          bind_addrs: ${GNB_IP:-10.53.1.3}
-      metrics:
-        autostart_stdout_metrics: true
-        enable_json: true
-      remote_control:
-        bind_addr: 0.0.0.0
-        enabled: true
 
 volumes:
   gnb-storage:

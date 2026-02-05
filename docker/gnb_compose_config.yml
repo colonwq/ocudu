@@ -1,0 +1,12 @@
+# Default compose-time overrides for gnb (5GC AMF address, metrics, remote control).
+# Override OPEN5GS_IP / GNB_IP in the environment or replace this file to customize.
+cu_cp:
+  amf:
+    addrs: 10.53.1.2
+    bind_addrs: 10.53.1.3
+metrics:
+  autostart_stdout_metrics: true
+  enable_json: true
+remote_control:
+  bind_addr: 0.0.0.0
+  enabled: true

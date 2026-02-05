@@ -93,25 +93,33 @@ main() {
         fi
 
     elif [[ "$ID" == "rhel" ]]; then
+        packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            dnf -y install cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel which
+            packages+=(cmake fftw-devel gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            dnf -y install fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gcc-toolset-12-libatomic-devel
+            packages+=(fftw-devel gcc-toolset-12-libatomic-devel lksctp-tools-devel mbedtls-devel yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
-            dnf -y install cppzmq-devel libusb1-devel boost-devel numactl-devel # dpdk elfutils-libelf-devel libdwarf elfutils-devel
+            packages+=(boost-devel cppzmq-devel libusb1-devel numactl-devel)
+        fi
+        if [[ ${#packages[@]} -gt 0 ]]; then
+            dnf -y install "${packages[@]}"
         fi
 
     elif [[ "$ID" == "fedora" ]]; then
+        packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            dnf -y install cmake fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel which
+            packages+=(cmake fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            dnf -y install fftw-devel lksctp-tools-devel yaml-cpp-devel mbedtls-devel gtest-devel
+            packages+=(fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
-            dnf -y install cppzmq-devel libusb1-devel boost-devel numactl-devel # dpdk elfutils-libelf-devel libdwarf elfutils-devel
+            packages+=(boost-devel cppzmq-devel libusb1-devel numactl-devel)
+        fi
+        if [[ ${#packages[@]} -gt 0 ]]; then
+            dnf -y install "${packages[@]}"
         fi
 
     else

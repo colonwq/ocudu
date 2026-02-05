@@ -11,63 +11,65 @@ FROM fedora:${OS_VERSION} AS base
 
 ENV PYTHONBUFFERED=1
 
-RUN dnf install -y dnf-plugins-core \
-    && dnf clean all
-
-RUN dnf install -y \
-    python3-pip \
-    python3-setuptools \
-    python3-wheel \
-    ninja-build \
-    gcc \
-    gcc-c++ \
-    make \
-    flex \
-    bison \
-    git \
-    lksctp-tools-devel \
-    gnutls-devel \
-    libgcrypt-devel \
-    openssl-devel \
-    libidn-devel \
-    mongo-c-driver-devel \
-    libyaml-devel \
-    libnghttp2-devel \
-    libmicrohttpd-devel \
-    libcurl-devel \
-    libtins-devel \
-    meson \
-    curl \
-    gettext \
-    gdb \
-    iproute \
-    iptables \
-    iputils \
-    nmap-ncat \
-    iperf3 \
-    libtalloc-devel \
-    cmake \
-    && dnf clean all
-
+# 1) Create MongoDB repo and GPG key before the single dnf install
 ARG MONGO_MAJOR_VERSION=6
-RUN dnf install -y wget \
-    && wget -qO /etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc \
+RUN curl -sL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb \
+    "https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc" \
     && echo "[mongodb-org-${MONGO_MAJOR_VERSION}.0]" > /etc/yum.repos.d/mongodb-org.repo \
     && echo "name=MongoDB Repository" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/${MONGO_MAJOR_VERSION}.0/x86_64/" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "gpgcheck=1" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "enabled=1" >> /etc/yum.repos.d/mongodb-org.repo \
-    && echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb" >> /etc/yum.repos.d/mongodb-org.repo \
-    && dnf install -y mongodb-org \
+    && echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb" >> /etc/yum.repos.d/mongodb-org.repo
+
+# 2) Single dnf install for all packages (base image has curl for the step above)
+RUN dnf install -y \
+    bison \
+    cmake \
+    curl \
+    dnf-plugins-core \
+    flex \
+    gcc \
+    gcc-c++ \
+    gdb \
+    gettext \
+    git \
+    gnutls-devel \
+    iperf3 \
+    iproute \
+    iptables \
+    iputils \
+    libcurl-devel \
+    libgcrypt-devel \
+    libidn-devel \
+    libmicrohttpd-devel \
+    libnghttp2-devel \
+    libtalloc-devel \
+    libtins-devel \
+    libyaml-devel \
+    lksctp-tools-devel \
+    make \
+    meson \
+    mongo-c-driver-devel \
+    mongodb-org \
+    ninja-build \
+    nmap-ncat \
+    nodejs \
+    openssl-devel \
+    python3-pip \
+    python3-setuptools \
+    python3-wheel \
     && dnf clean all
 
-# To set a fixed version of open5gs use
+# 3) Python pip install
+RUN python3 -m pip install click ipaddress pyroute2 pymongo python-iptables
+
+# 4) Build open5gs
 ARG OPEN5GS_VERSION=v2.7.5
 RUN echo $OPEN5GS_VERSION > ./open5gsversion
 # get latest open5gs tag (must be stored in a file, because docker does not allow to use the return value directly)
 # RUN git ls-remote --tags https://github.com/open5gs/open5gs | sort -t '/' -k 3 -V | awk -F/ '{ print $3 }' | awk '!/\^\{\}/' | tail -n 1 > ./open5gsversion
 
-# open5gs
 ARG NUM_JOBS=""
 RUN if [ -z "$NUM_JOBS" ]; then NUM_JOBS=$(nproc); fi && \
     git clone --depth 1 --branch $(cat ./open5gsversion) https://github.com/open5gs/open5gs open5gs\
@@ -84,14 +86,12 @@ RUN if [ -d /open5gs/install/lib64/freeDiameter ]; then \
       cp -a /open5gs/install/lib64/freeDiameter /open5gs/install/lib/aarch64-linux-gnu/; \
     fi
 
-# webgui
-RUN dnf install -y nodejs \
-    && cd open5gs/webui \
-    && npm ci --no-optional
+# 5) npm install for webui
+RUN cd open5gs/webui && npm ci --no-optional
 
-# mongodb python prerequisites
-RUN python3 -m pip install pymongo click pyroute2 ipaddress python-iptables
-
+#############################
+# Final stage: open5gs run  #
+#############################
 FROM base AS open5gs
 
 WORKDIR /open5gs

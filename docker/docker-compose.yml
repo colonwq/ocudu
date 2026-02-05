@@ -57,7 +57,7 @@ services:
       - gnb-storage:/tmp
       # Config files (volume mounts work with podman-compose; configs: may not mount at expected paths)
       - ${GNB_CONFIG_PATH:-../configs/gnb_rf_b200_tdd_n78_20mhz.yml}:/gnb_config.yml:ro
-      - docker/gnb_compose_config.yml:/gnb_compose_config.yml:ro
+      - ./gnb_compose_config.yml:/gnb_compose_config.yml:ro
     # Customize your desired network mode.
     # current netowrk configuration creastes a private netwoek with both containers attached
     # An alterantive would be `network: host"`. That would expose your host network into the container. It's the easiest to use if the 5gc is not in your PC

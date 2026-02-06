@@ -8,13 +8,15 @@
 
 # Build args
 ################
-# OS_VERSION            Fedora OS version (e.g. 43)
+# OS                    Base OS: fedora | ubuntu (default: fedora)
+# OS_VERSION            OS version, e.g. 43 (Fedora) or 24.04 (Ubuntu) (default: 43)
 # UHD_VERSION           UHD version number
 # DPDK_VERSION          DPDK version number
 # MARCH                 gcc/clang compatible arch
 # NUM_JOBS              Number or empty for all
 # EXTRA_CMAKE_ARGS      Extra flags for OCUDU
 
+ARG OS=fedora
 ARG OS_VERSION=43
 ARG UHD_VERSION=4.7.0.0
 ARG DPDK_VERSION=24.11.2
@@ -25,7 +27,7 @@ ARG NUM_JOBS=""
 # Stage 1: Build #
 ##################
 
-FROM fedora:${OS_VERSION} AS builder-base
+FROM ${OS}:${OS_VERSION} AS builder-base
 
 # Adding the complete repo to the context, in /src folder
 ADD . /src
@@ -97,7 +99,7 @@ RUN cp /src/build/apps/cu/ocu             /tmp/ocu                     && \
 # Stage 2: Run #
 ################
 
-FROM fedora:${OS_VERSION} AS runtime
+FROM ${OS}:${OS_VERSION} AS runtime
 
 ARG UHD_VERSION
 ARG DPDK_VERSION

@@ -5,9 +5,11 @@
 # forth in the LICENSE file which can be found at the top level of
 # the distribution.
 #
+# Build args: OS (fedora|ubuntu, default fedora), OS_VERSION (default 43)
 
+ARG OS=fedora
 ARG OS_VERSION=43
-FROM fedora:${OS_VERSION} AS base
+FROM ${OS}:${OS_VERSION} AS base
 
 ENV PYTHONBUFFERED=1
 

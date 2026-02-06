@@ -24,7 +24,9 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     && update-ca-certificates \
     && curl -fsSL "https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc" \
        | gpg --dearmor -o /usr/share/keyrings/mongodb-server-${MONGO_MAJOR_VERSION}.0.gpg \
-    && echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-${MONGO_MAJOR_VERSION}.0.gpg ] https://repo.mongodb.org/apt/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME)/mongodb-org/${MONGO_MAJOR_VERSION}.0 multiverse" \
+    && MONGO_CODENAME=$(. /etc/os-release && echo $VERSION_CODENAME) \
+    && case "$MONGO_CODENAME" in noble) MONGO_CODENAME=jammy;; esac \
+    && echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-${MONGO_MAJOR_VERSION}.0.gpg ] https://repo.mongodb.org/apt/ubuntu ${MONGO_CODENAME}/mongodb-org/${MONGO_MAJOR_VERSION}.0 multiverse" \
        | tee /etc/apt/sources.list.d/mongodb-org-${MONGO_MAJOR_VERSION}.0.list \
     && apt-get update && apt-get install -y --no-install-recommends \
     bison \

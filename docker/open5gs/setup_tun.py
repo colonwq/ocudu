@@ -26,6 +26,7 @@ def _iptables_add_masquerade(if_name, ip_range):
     """Return True if the rule was added, False otherwise."""
     print("_iptables_add_masquerade function being called", file=sys.stderr)
     if iptc is None:
+        print("_iptables_add_masquerade: iptc module not available", file=sys.stderr)
         return False
     try:
         chain = iptc.Chain(iptc.Table(iptc.Table.NAT), "POSTROUTING")
@@ -36,7 +37,8 @@ def _iptables_add_masquerade(if_name, ip_range):
         rule.target = target
         chain.insert_rule(rule)
         return True
-    except Exception:
+    except Exception as e:
+        print(f"_iptables_add_masquerade failed: {e}", file=sys.stderr)
         return False
 
 
@@ -44,6 +46,7 @@ def _iptables_allow_all(if_name):
     """Return True if the rule was added, False otherwise."""
     print("_iptables_allow_all function being called", file=sys.stderr)
     if iptc is None:
+        print("_iptables_allow_all: iptc module not available", file=sys.stderr)
         return False
     try:
         chain = iptc.Chain(iptc.Table(iptc.Table.FILTER), "INPUT")
@@ -53,7 +56,8 @@ def _iptables_allow_all(if_name):
         rule.target = target
         chain.insert_rule(rule)
         return True
-    except Exception:
+    except Exception as e:
+        print(f"_iptables_allow_all failed: {e}", file=sys.stderr)
         return False
 
 
@@ -86,7 +90,8 @@ def _firewall_cmd_add_masquerade(ip_range):
                 print(r.stderr, file=sys.stderr)
             return False
         return True
-    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        print(f"_firewall_cmd_add_masquerade failed: {e}", file=sys.stderr)
         return False
 
 
@@ -119,7 +124,8 @@ def _firewall_cmd_allow_interface(if_name):
                 print(r.stderr, file=sys.stderr)
             return False
         return True
-    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        print(f"_firewall_cmd_allow_interface failed: {e}", file=sys.stderr)
         return False
 
 

@@ -44,6 +44,7 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     libgcrypt-dev \
     libgnutls28-dev \
     libidn2-dev \
+    libidn-dev \
     libmicrohttpd-dev \
     libmongoc-dev \
     libnghttp2-dev \

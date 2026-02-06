@@ -63,7 +63,8 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     python3-pip \
     python3-setuptools \
     python3-wheel \
-    && rm -rf /var/lib/apt/lists/*; \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --break-system-packages click ipaddress pyroute2 pymongo python-iptables; \
   else \
     curl -sL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb \
       "https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc" \
@@ -109,13 +110,11 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     python3-pip \
     python3-setuptools \
     python3-wheel \
-    && dnf clean all; \
+    && dnf clean all \
+    && pip install click ipaddress pyroute2 pymongo python-iptables; \
   fi
 
-# 3) Python pip install (Ubuntu 24+ needs --break-system-packages per PEP 668)
-RUN if [ "$OS" = "ubuntu" ]; then python3 -m pip install --break-system-packages click ipaddress pyroute2 pymongo python-iptables; else python3 -m pip install click ipaddress pyroute2 pymongo python-iptables; fi
-
-# 4) Build open5gs
+# 3) Build open5gs
 ARG OPEN5GS_VERSION=v2.7.5
 RUN echo $OPEN5GS_VERSION > ./open5gsversion
 # get latest open5gs tag (must be stored in a file, because docker does not allow to use the return value directly)
@@ -137,7 +136,7 @@ RUN if [ -d /open5gs/install/lib64/freeDiameter ]; then \
       cp -a /open5gs/install/lib64/freeDiameter /open5gs/install/lib/aarch64-linux-gnu/; \
     fi
 
-# 5) npm install for webui
+# 4) npm install for webui
 RUN cd open5gs/webui && npm ci --no-optional
 
 #############################

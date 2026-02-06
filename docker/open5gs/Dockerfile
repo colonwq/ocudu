@@ -51,6 +51,7 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     libssl-dev \
     libtalloc-dev \
     libtins-dev \
+    libyaml-dev \
     libyaml-cpp-dev \
     meson \
     mongodb-org \

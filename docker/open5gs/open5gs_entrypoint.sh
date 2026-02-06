@@ -19,18 +19,19 @@ do
     ip link set lo$IP up
 done
 
-# run webui
-cd webui && npm run dev &
+# run mongodb first so it is ready before webui and 5gc
+mkdir -p /data/db && mongod --logpath /tmp/mongodb.log --bind_ip 127.0.0.1 &
 
-# run mongodb
-mkdir -p /data/db && mongod --logpath /tmp/mongodb.log &
-
-# wait for mongodb to be available, otherwise open5gs will not start correctly
+# wait for mongodb to be available (webui and add_users will need it)
 while ! ( nc -zv $MONGODB_IP 27017 2>&1 >/dev/null )
 do
     echo waiting for mongodb
     sleep 1
 done
+
+# run webui (use DB_URI so it connects to 127.0.0.1, avoiding IPv6 ::1)
+export DB_URI="mongodb://${MONGODB_IP}/open5gs"
+cd webui && npm run dev &
 
 # setup ogstun and routing
 python3 setup_tun.py --ip_range ${UE_IP_RANGE}

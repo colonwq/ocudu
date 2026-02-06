@@ -11,21 +11,63 @@ ARG OS=fedora
 ARG OS_VERSION=43
 FROM ${OS}:${OS_VERSION} AS base
 
+# Re-declare so they are available in RUN (ARGs before FROM are not in scope)
+ARG OS
+ARG OS_VERSION
+ARG MONGO_MAJOR_VERSION=6
+
 ENV PYTHONBUFFERED=1
 
-# 1) Create MongoDB repo and GPG key before the single dnf install
-ARG MONGO_MAJOR_VERSION=6
-RUN curl -sL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb \
-    "https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc" \
+# 1) MongoDB repo + 2) Install all build/runtime packages (OS-specific)
+RUN if [ "$OS" = "ubuntu" ]; then \
+    apt-get update && apt-get install -y --no-install-recommends curl gnupg \
+    && curl -fsSL "https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc" \
+       | gpg --dearmor -o /usr/share/keyrings/mongodb-server-${MONGO_MAJOR_VERSION}.0.gpg \
+    && echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-${MONGO_MAJOR_VERSION}.0.gpg ] https://repo.mongodb.org/apt/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME)/mongodb-org/${MONGO_MAJOR_VERSION}.0 multiverse" \
+       | tee /etc/apt/sources.list.d/mongodb-org-${MONGO_MAJOR_VERSION}.0.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    bison \
+    build-essential \
+    cmake \
+    flex \
+    gdb \
+    gettext \
+    git \
+    iperf3 \
+    iproute2 \
+    iptables \
+    iputils-ping \
+    libcurl4-openssl-dev \
+    libgcrypt-dev \
+    libgnutls28-dev \
+    libidn2-dev \
+    libmicrohttpd-dev \
+    libmongoc-dev \
+    libnghttp2-dev \
+    libsctp-dev \
+    libssl-dev \
+    libtalloc-dev \
+    libtins-dev \
+    libyaml-cpp-dev \
+    meson \
+    mongodb-org \
+    netcat-openbsd \
+    ninja-build \
+    nodejs \
+    python3-pip \
+    python3-setuptools \
+    python3-wheel \
+    && rm -rf /var/lib/apt/lists/*; \
+  else \
+    curl -sL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb \
+      "https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc" \
     && echo "[mongodb-org-${MONGO_MAJOR_VERSION}.0]" > /etc/yum.repos.d/mongodb-org.repo \
     && echo "name=MongoDB Repository" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/${MONGO_MAJOR_VERSION}.0/x86_64/" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "gpgcheck=1" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "enabled=1" >> /etc/yum.repos.d/mongodb-org.repo \
-    && echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb" >> /etc/yum.repos.d/mongodb-org.repo
-
-# 2) Single dnf install for all packages (base image has curl for the step above)
-RUN dnf install -y \
+    && echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb" >> /etc/yum.repos.d/mongodb-org.repo \
+    && dnf install -y \
     bison \
     cmake \
     curl \
@@ -61,7 +103,8 @@ RUN dnf install -y \
     python3-pip \
     python3-setuptools \
     python3-wheel \
-    && dnf clean all
+    && dnf clean all; \
+  fi
 
 # 3) Python pip install
 RUN python3 -m pip install click ipaddress pyroute2 pymongo python-iptables

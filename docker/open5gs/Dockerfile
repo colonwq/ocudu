@@ -109,8 +109,8 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     && dnf clean all; \
   fi
 
-# 3) Python pip install
-RUN python3 -m pip install click ipaddress pyroute2 pymongo python-iptables
+# 3) Python pip install (Ubuntu 24+ needs --break-system-packages per PEP 668)
+RUN if [ "$OS" = "ubuntu" ]; then python3 -m pip install --break-system-packages click ipaddress pyroute2 pymongo python-iptables; else python3 -m pip install click ipaddress pyroute2 pymongo python-iptables; fi
 
 # 4) Build open5gs
 ARG OPEN5GS_VERSION=v2.7.5

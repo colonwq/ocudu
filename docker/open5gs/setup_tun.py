@@ -25,7 +25,7 @@ def handle_ip_string(ctx, param, value):
 
 def _iptables_add_masquerade(if_name, ip_range):
     """Return True if the rule was added, False otherwise."""
-    print("_iptables_add_masquerade function being called", file=sys.stderr)
+    # print("_iptables_add_masquerade function being called", file=sys.stderr)
     if iptc is None:
         print("_iptables_add_masquerade: iptc module not available", file=sys.stderr)
         return False
@@ -45,7 +45,7 @@ def _iptables_add_masquerade(if_name, ip_range):
 
 def _iptables_allow_all(if_name):
     """Return True if the rule was added, False otherwise."""
-    print("_iptables_allow_all function being called", file=sys.stderr)
+    # print("_iptables_allow_all function being called", file=sys.stderr)
     if iptc is None:
         print("_iptables_allow_all: iptc module not available", file=sys.stderr)
         return False
@@ -64,7 +64,7 @@ def _iptables_allow_all(if_name):
 
 def _iptables_cmd_add_masquerade(if_name, ip_range_str):
     """Run iptables binary (e.g. iptables-nft on Ubuntu). Return True if rule added."""
-    print("_iptables_cmd_add_masquerade function being called", file=sys.stderr)
+    # print("_iptables_cmd_add_masquerade function being called", file=sys.stderr)
     try:
         r = subprocess.run(
             [
@@ -91,7 +91,7 @@ def _iptables_cmd_add_masquerade(if_name, ip_range_str):
 
 def _iptables_cmd_allow_all(if_name):
     """Run iptables binary. Return True if rule added."""
-    print("_iptables_cmd_allow_all function being called", file=sys.stderr)
+    # print("_iptables_cmd_allow_all function being called", file=sys.stderr)
     try:
         r = subprocess.run(
             [
@@ -116,7 +116,7 @@ def _iptables_cmd_allow_all(if_name):
 
 def _nft_add_masquerade(if_name, ip_range_str):
     """Add masquerade rule via nftables (Ubuntu 24.04 default). Return True if added."""
-    print("_nft_add_masquerade function being called", file=sys.stderr)
+    # print("_nft_add_masquerade function being called", file=sys.stderr)
     try:
         # Ensure table and chain exist (ignore errors if already present)
         subprocess.run(
@@ -156,7 +156,7 @@ def _nft_add_masquerade(if_name, ip_range_str):
 
 def _nft_allow_interface(if_name):
     """Add accept rule for interface via nftables. Return True if added."""
-    print("_nft_allow_interface function being called", file=sys.stderr)
+    # print("_nft_allow_interface function being called", file=sys.stderr)
     try:
         subprocess.run(
             ["nft", "add", "table", "ip", "filter"],
@@ -194,7 +194,7 @@ def _nft_allow_interface(if_name):
 
 def _firewall_cmd_add_masquerade(ip_range):
     """Return True if the rule was added, False otherwise."""
-    print("_firewall_cmd_add_masquerade function being called", file=sys.stderr)
+    # print("_firewall_cmd_add_masquerade function being called", file=sys.stderr)
     try:
         r = subprocess.run(
             [
@@ -228,7 +228,7 @@ def _firewall_cmd_add_masquerade(ip_range):
 
 def _firewall_cmd_allow_interface(if_name):
     """Return True if the rule was added, False otherwise."""
-    print("_firewall_cmd_allow_interface function being called", file=sys.stderr)
+    # print("_firewall_cmd_allow_interface function being called", file=sys.stderr)
     try:
         r = subprocess.run(
             [

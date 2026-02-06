@@ -20,7 +20,8 @@ ENV PYTHONBUFFERED=1
 
 # 1) MongoDB repo + 2) Install all build/runtime packages (OS-specific)
 RUN if [ "$OS" = "ubuntu" ]; then \
-    apt-get update && apt-get install -y --no-install-recommends curl gnupg \
+    apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+    && update-ca-certificates \
     && curl -fsSL "https://www.mongodb.org/static/pgp/server-${MONGO_MAJOR_VERSION}.0.asc" \
        | gpg --dearmor -o /usr/share/keyrings/mongodb-server-${MONGO_MAJOR_VERSION}.0.gpg \
     && echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-${MONGO_MAJOR_VERSION}.0.gpg ] https://repo.mongodb.org/apt/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME)/mongodb-org/${MONGO_MAJOR_VERSION}.0 multiverse" \

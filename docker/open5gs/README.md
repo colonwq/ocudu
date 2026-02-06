@@ -1,7 +1,7 @@
 # Open5GS Container
 
 This is a all-in-one Docker container for Open5GS. At build, the container will use the specified version of the open5gs repository (default v2.6.6
-). To run the latest tag of the open5gs repository ([https://github.com/open5gs/open5gs/tags](https://github.com/open5gs/open5gs/tags)), line 51 and 52 in .Dockerfile
+). To run the latest tag of the open5gs repository ([https://github.com/open5gs/open5gs/tags](https://github.com/open5gs/open5gs/tags)), comment out line 119 and uncomment line 121 in the Dockerfile.
 
 ```Dockerfile
 # get latest open5gs tag (must be stored in a file, because docker does not allow to use the return value directly)

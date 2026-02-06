@@ -24,6 +24,7 @@ def handle_ip_string(ctx, param, value):
 
 def _iptables_add_masquerade(if_name, ip_range):
     """Return True if the rule was added, False otherwise."""
+    print("_iptables_add_masquerade function being called", file=sys.stderr)
     if iptc is None:
         return False
     try:
@@ -41,6 +42,7 @@ def _iptables_add_masquerade(if_name, ip_range):
 
 def _iptables_allow_all(if_name):
     """Return True if the rule was added, False otherwise."""
+    print("_iptables_allow_all function being called", file=sys.stderr)
     if iptc is None:
         return False
     try:
@@ -57,6 +59,7 @@ def _iptables_allow_all(if_name):
 
 def _firewall_cmd_add_masquerade(ip_range):
     """Return True if the rule was added, False otherwise."""
+    print("_firewall_cmd_add_masquerade function being called", file=sys.stderr)
     try:
         r = subprocess.run(
             [
@@ -66,18 +69,30 @@ def _firewall_cmd_add_masquerade(ip_range):
                 f'rule family=ipv4 source address={ip_range} masquerade',
             ],
             capture_output=True,
+            text=True,
             timeout=10,
         )
         if r.returncode != 0:
+            if r.stdout:
+                print(r.stdout, file=sys.stderr)
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
             return False
-        r = subprocess.run(["firewall-cmd", "--reload"], capture_output=True, timeout=10)
-        return r.returncode == 0
+        r = subprocess.run(["firewall-cmd", "--reload"], capture_output=True, text=True, timeout=10)
+        if r.returncode != 0:
+            if r.stdout:
+                print(r.stdout, file=sys.stderr)
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
+            return False
+        return True
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
         return False
 
 
 def _firewall_cmd_allow_interface(if_name):
     """Return True if the rule was added, False otherwise."""
+    print("_firewall_cmd_allow_interface function being called", file=sys.stderr)
     try:
         r = subprocess.run(
             [
@@ -87,12 +102,23 @@ def _firewall_cmd_allow_interface(if_name):
                 f'rule family=ipv4 interface name={if_name} accept',
             ],
             capture_output=True,
+            text=True,
             timeout=10,
         )
         if r.returncode != 0:
+            if r.stdout:
+                print(r.stdout, file=sys.stderr)
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
             return False
-        r = subprocess.run(["firewall-cmd", "--reload"], capture_output=True, timeout=10)
-        return r.returncode == 0
+        r = subprocess.run(["firewall-cmd", "--reload"], capture_output=True, text=True, timeout=10)
+        if r.returncode != 0:
+            if r.stdout:
+                print(r.stdout, file=sys.stderr)
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
+            return False
+        return True
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
         return False
 
@@ -113,6 +139,7 @@ def setup_firewall_rules(if_name, ip_range_str):
             "NAT/forwarding for the TUN interface may not work; TUN and routing are still set up.",
             file=sys.stderr,
         )
+        print(f"  if_name={if_name!r} ip_range_str={ip_range_str!r}", file=sys.stderr)
     return masq_ok, allow_ok
 
 

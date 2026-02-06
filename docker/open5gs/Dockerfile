@@ -40,6 +40,7 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     iproute2 \
     iptables \
     iputils-ping \
+    nftables \
     libcurl4-openssl-dev \
     libgcrypt-dev \
     libgnutls28-dev \

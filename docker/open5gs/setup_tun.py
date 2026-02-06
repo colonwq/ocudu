@@ -61,6 +61,136 @@ def _iptables_allow_all(if_name):
         return False
 
 
+def _iptables_cmd_add_masquerade(if_name, ip_range_str):
+    """Run iptables binary (e.g. iptables-nft on Ubuntu). Return True if rule added."""
+    print("_iptables_cmd_add_masquerade function being called", file=sys.stderr)
+    try:
+        r = subprocess.run(
+            [
+                "iptables",
+                "-t", "nat",
+                "-A", "POSTROUTING",
+                "-s", ip_range_str,
+                "-o", if_name,
+                "-j", "MASQUERADE",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if r.returncode != 0:
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
+            return False
+        return True
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        print(f"_iptables_cmd_add_masquerade failed: {e}", file=sys.stderr)
+        return False
+
+
+def _iptables_cmd_allow_all(if_name):
+    """Run iptables binary. Return True if rule added."""
+    print("_iptables_cmd_allow_all function being called", file=sys.stderr)
+    try:
+        r = subprocess.run(
+            [
+                "iptables",
+                "-A", "INPUT",
+                "-i", if_name,
+                "-j", "ACCEPT",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if r.returncode != 0:
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
+            return False
+        return True
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        print(f"_iptables_cmd_allow_all failed: {e}", file=sys.stderr)
+        return False
+
+
+def _nft_add_masquerade(if_name, ip_range_str):
+    """Add masquerade rule via nftables (Ubuntu 24.04 default). Return True if added."""
+    print("_nft_add_masquerade function being called", file=sys.stderr)
+    try:
+        # Ensure table and chain exist (ignore errors if already present)
+        subprocess.run(
+            ["nft", "add", "table", "ip", "nat"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        subprocess.run(
+            [
+                "nft", "add", "chain", "ip", "nat", "postrouting",
+                "{ type nat hook postrouting priority 100 ; }",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        # nft add rule needs the chain to exist; some systems have it via iptables-nft
+        r = subprocess.run(
+            [
+                "nft", "add", "rule", "ip", "nat", "postrouting",
+                "oifname", if_name, "ip", "saddr", ip_range_str, "masquerade",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if r.returncode != 0:
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
+            return False
+        return True
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        print(f"_nft_add_masquerade failed: {e}", file=sys.stderr)
+        return False
+
+
+def _nft_allow_interface(if_name):
+    """Add accept rule for interface via nftables. Return True if added."""
+    print("_nft_allow_interface function being called", file=sys.stderr)
+    try:
+        subprocess.run(
+            ["nft", "add", "table", "ip", "filter"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        subprocess.run(
+            [
+                "nft", "add", "chain", "ip", "filter", "input",
+                "{ type filter hook input priority 0 ; }",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        r = subprocess.run(
+            [
+                "nft", "add", "rule", "ip", "filter", "input",
+                "iifname", if_name, "accept",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if r.returncode != 0:
+            if r.stderr:
+                print(r.stderr, file=sys.stderr)
+            return False
+        return True
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+        print(f"_nft_allow_interface failed: {e}", file=sys.stderr)
+        return False
+
+
 def _firewall_cmd_add_masquerade(ip_range):
     """Return True if the rule was added, False otherwise."""
     print("_firewall_cmd_add_masquerade function being called", file=sys.stderr)
@@ -130,18 +260,26 @@ def _firewall_cmd_allow_interface(if_name):
 
 
 def setup_firewall_rules(if_name, ip_range_str):
-    """Try iptables first, then firewall-cmd. Return (masquerade_ok, allow_ok)."""
+    """Try iptables (iptc), then iptables CLI, then nftables, then firewall-cmd. Return (masquerade_ok, allow_ok)."""
     masq_ok = _iptables_add_masquerade(if_name, ip_range_str)
+    if not masq_ok:
+        masq_ok = _iptables_cmd_add_masquerade(if_name, ip_range_str)
+    if not masq_ok:
+        masq_ok = _nft_add_masquerade(if_name, ip_range_str)
     if not masq_ok:
         masq_ok = _firewall_cmd_add_masquerade(ip_range_str)
 
     allow_ok = _iptables_allow_all(if_name)
     if not allow_ok:
+        allow_ok = _iptables_cmd_allow_all(if_name)
+    if not allow_ok:
+        allow_ok = _nft_allow_interface(if_name)
+    if not allow_ok:
         allow_ok = _firewall_cmd_allow_interface(if_name)
 
     if not masq_ok or not allow_ok:
         print(
-            "CRITICAL: Could not add firewall rules (tried iptables and firewall-cmd). "
+            "CRITICAL: Could not add firewall rules (tried iptables, iptables-cmd, nftables, firewall-cmd). "
             "NAT/forwarding for the TUN interface may not work; TUN and routing are still set up.",
             file=sys.stderr,
         )

@@ -7,7 +7,8 @@ import sys
 
 try:
     import iptc
-except ImportError:
+except (ImportError, AttributeError, OSError, Exception):
+    # iptc may be installed but fail to load (e.g. libiptc missing/incompatible in container)
     iptc = None
 
 from pyroute2 import IPRoute

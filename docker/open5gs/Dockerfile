@@ -81,6 +81,7 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     curl \
     dnf-plugins-core \
     flex \
+    firewalld \
     gcc \
     gcc-c++ \
     gdb \
@@ -105,6 +106,7 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     mongo-c-driver-devel \
     mongodb-org \
     ninja-build \
+    nftables \
     nmap-ncat \
     nodejs \
     openssl-devel \

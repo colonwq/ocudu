@@ -59,6 +59,7 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     netcat-openbsd \
     ninja-build \
     nodejs \
+    npm \
     python3-pip \
     python3-setuptools \
     python3-wheel \

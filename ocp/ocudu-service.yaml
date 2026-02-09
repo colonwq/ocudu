@@ -447,7 +447,11 @@ spec:
   selector:
     app: gnb
 ---
-# 5GC deployment. For restricted PodSecurity; if 5gc needs TUN/privileged, use a namespace with baseline/privileged SCC.
+# 5GC deployment. Uses the image entrypoint so that dummy interfaces (127.0.0.2-22),
+# MongoDB, envsubst, webui, setup_tun, add_users and 5gc all run. Requires a relaxed SCC
+# (e.g. privileged or custom with NET_ADMIN, NET_RAW, runAsUser) so the pod can create
+# loopback interfaces. To allow: oc adm policy add-scc-to-user privileged -z default -n ocudu
+# (or create a dedicated SA and use it in the deployment).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -472,10 +476,7 @@ spec:
         - name: 5gc
           image: quay.io/kschinck/docker_5gc:20260205
           workingDir: /open5gs
-          command:
-            - /bin/sh
-            - -c
-            - envsubst < /open5gs/open5gs-5gc.yml.in > /tmp/open5gs-5gc.yml && exec 5gc -c /tmp/open5gs-5gc.yml
+          # Use image entrypoint so dummy interfaces, MongoDB, envsubst, webui, add_users and 5gc run
           ports:
             - containerPort: 9999
               name: web
@@ -490,22 +491,23 @@ spec:
           livenessProbe:
             exec:
               command: ["nc", "-z", "127.0.0.20", "7777"]
-            initialDelaySeconds: 30
-            periodSeconds: 3
-            timeoutSeconds: 1
-            failureThreshold: 60
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           readinessProbe:
             exec:
               command: ["nc", "-z", "127.0.0.20", "7777"]
-            initialDelaySeconds: 10
-            periodSeconds: 3
-            timeoutSeconds: 1
-            failureThreshold: 60
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 24
           securityContext:
-            allowPrivilegeEscalation: false
+            allowPrivilegeEscalation: true
             capabilities:
+              add: ["NET_ADMIN", "NET_RAW"]
               drop: ["ALL"]
-            runAsNonRoot: true
+            runAsUser: 0
             seccompProfile:
               type: RuntimeDefault
       volumes:

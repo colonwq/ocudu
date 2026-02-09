@@ -46,9 +46,13 @@ then
     exit 1
 fi
 
+# Default to 5gc when no args (e.g. OpenShift runs entrypoint with no CMD)
+if [ $# -eq 0 ]; then
+    set -- 5gc -c open5gs-5gc.yml
+fi
 if $DEBUG
 then
-    exec stdbuf -o L gdb -batch -ex=run -ex=bt --args $@
+    exec stdbuf -o L gdb -batch -ex=run -ex=bt --args "$@"
 else
-    exec stdbuf -o L $@
+    exec stdbuf -o L "$@"
 fi

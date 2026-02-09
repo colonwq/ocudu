@@ -25,8 +25,13 @@ main() {
     cd /tmp
     local tarball="/tmp/uhd-v${uhd_version}.tar.gz"
     curl -fsSL -o "${tarball}" "https://github.com/EttusResearch/uhd/archive/refs/tags/v${uhd_version}.tar.gz"
-    if [ ! -s "${tarball}" ] || ! file "${tarball}" | grep -qi gzip; then
-        echo >&2 "UHD download failed or not a gzip file (check tag v${uhd_version} exists at https://github.com/EttusResearch/uhd/releases)"
+    curl_ret=$?
+    if [ ${curl_ret} -ne 0 ]; then
+        echo >&2 "UHD download failed (curl exit code ${curl_ret})"
+        exit 1
+    fi
+    if [ ! -f "${tarball}" ] || [ "$(wc -c < "${tarball}")" -le 2048 ]; then
+        echo >&2 "UHD download too small or missing (check tag v${uhd_version} exists at https://github.com/EttusResearch/uhd/releases)"
         [ -s "${tarball}" ] && head -c 500 "${tarball}" >&2 || true
         exit 1
     fi

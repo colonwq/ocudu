@@ -1,0 +1,72 @@
+#
+# Custom Security Context Constraint and RBAC for the fivegc deployment.
+# Apply after the namespace and other resources exist: oc apply -f ocudu-service.yaml && oc apply -f ocudu-scc.yaml
+#
+# The fivegc pod needs to run as root and create dummy network interfaces (127.0.0.2-22).
+# This SCC allows that without granting full privileged. The Role grants "use" of this SCC
+# to the default service account in the ocudu namespace.
+#
+---
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: fivegc-scc
+  annotations:
+    description: "Allows fivegc to run as root and add NET_ADMIN/NET_RAW for dummy interfaces. Restrict to ocudu namespace via RBAC."
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: true
+allowedCapabilities:
+  - NET_ADMIN
+  - NET_RAW
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+priority: 10
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+volumes:
+  - "*"
+seccompProfiles:
+  - "*"
+---
+# Role that grants "use" of the fivegc-scc to whoever is bound (default SA in ocudu).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fivegc-scc-use
+  namespace: ocudu
+rules:
+  - apiGroups:
+      - security.openshift.io
+    resourceNames:
+      - fivegc-scc
+    resources:
+      - securitycontextconstraints
+    verbs:
+      - use
+---
+# Bind the Role to the default service account so fivegc pods can use the SCC.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fivegc-scc-use
+  namespace: ocudu
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fivegc-scc-use
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: ocudu

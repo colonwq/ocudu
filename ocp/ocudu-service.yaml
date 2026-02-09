@@ -1,7 +1,7 @@
 #
 # OpenShift/Kubernetes manifest for OCUDU 5GC and gNB services.
 # Based on docker/docker-compose.yml.
-# Apply from ocp dir: oc apply -f ocudu-service.yaml
+# Apply from ocp dir: oc apply -f ocudu-service.yaml && oc apply -f ocudu-scc.yaml
 #
 # Images:
 #   - 5GC: quay.io/kschinck/docker_5gc:20260205
@@ -448,10 +448,9 @@ spec:
     app: gnb
 ---
 # 5GC deployment. Uses the image entrypoint so that dummy interfaces (127.0.0.2-22),
-# MongoDB, envsubst, webui, setup_tun, add_users and 5gc all run. Requires a relaxed SCC
-# (e.g. privileged or custom with NET_ADMIN, NET_RAW, runAsUser) so the pod can create
-# loopback interfaces. To allow: oc adm policy add-scc-to-user privileged -z default -n ocudu
-# (or create a dedicated SA and use it in the deployment).
+# MongoDB, envsubst, webui, setup_tun, add_users and 5gc all run. Requires the custom SCC
+# and RBAC from ocudu-scc.yaml so the pod can run as root and create interfaces. Apply order:
+#   oc apply -f ocudu-service.yaml && oc apply -f ocudu-scc.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:

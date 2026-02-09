@@ -21,6 +21,7 @@ main() {
     local arch="${2:-native}"
     local ncores="${3:-$(nproc)}"
 
+    set -x
     cd /tmp
     local tarball="/tmp/uhd-v${uhd_version}.tar.gz"
     curl -fsSL -o "${tarball}" "https://github.com/EttusResearch/uhd/archive/refs/tags/v${uhd_version}.tar.gz"
@@ -31,6 +32,7 @@ main() {
     fi
     tar xzf "${tarball}"
     rm -f "${tarball}"
+    set +x
 
     # Add missing #include <cstdint> to headers that use uint32_t etc. (GCC 15+ on Fedora 43)
     UHD_TOP=$(ls -d /tmp/uhd-*"${uhd_version}"* 2>/dev/null | head -1)

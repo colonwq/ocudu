@@ -31,7 +31,7 @@ data:
   NETWORK_NAME_SHORT: "OCUDU"
   TZ: "Europe/Madrid"
 ---
-# gNB compose overlay: AMF address set to 5gc service (in-cluster DNS)
+# gNB compose overlay: AMF address set to fivegc service (in-cluster DNS)
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -41,7 +41,7 @@ data:
   gnb_compose_config.yml: |
     cu_cp:
       amf:
-        addrs: 5gc
+        addrs: fivegc
         bind_addrs: 0.0.0.0
     metrics:
       autostart_stdout_metrics: true
@@ -93,10 +93,11 @@ data:
       ngap_enable: false
       ngap_filename: /tmp/gnb_ngap.pcap
 ---
+# Service name must be DNS-1035 (start with letter); "5gc" is invalid so use "fivegc"
 apiVersion: v1
 kind: Service
 metadata:
-  name: 5gc
+  name: fivegc
   namespace: ocudu
   labels:
     app: 5gc
@@ -125,10 +126,11 @@ spec:
   selector:
     app: gnb
 ---
+# 5GC deployment. For restricted PodSecurity; if 5gc needs TUN/privileged, use a namespace with baseline/privileged SCC.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: 5gc
+  name: fivegc
   namespace: ocudu
   labels:
     app: 5gc
@@ -142,6 +144,9 @@ spec:
       labels:
         app: 5gc
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: 5gc
           image: quay.io/kschinck/docker_5gc:20260205
@@ -167,7 +172,12 @@ spec:
             timeoutSeconds: 1
             failureThreshold: 60
           securityContext:
-            privileged: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -186,6 +196,9 @@ spec:
       labels:
         app: gnb
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: gnb
           image: quay.io/kschinck/gnb:20260205
@@ -195,7 +208,7 @@ spec:
               name: metrics
           env:
             - name: OPEN5GS_IP
-              value: "5gc"
+              value: "fivegc"
             - name: GNB_IP
               valueFrom:
                 fieldRef:
@@ -218,8 +231,12 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
           securityContext:
+            allowPrivilegeEscalation: false
             capabilities:
-              add: ["SYS_NICE", "SYS_PTRACE"]
+              drop: ["ALL"]
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
       volumes:
         - name: gnb-config
           configMap:
@@ -232,12 +249,12 @@ spec:
 # apiVersion: route.openshift.io/v1
 # kind: Route
 # metadata:
-#   name: 5gc-web
+#   name: fivegc-web
 #   namespace: ocudu
 # spec:
 #   to:
 #     kind: Service
-#     name: 5gc
+#     name: fivegc
 #   port:
 #     targetPort: web
 #   tls:

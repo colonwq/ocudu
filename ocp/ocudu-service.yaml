@@ -150,6 +150,7 @@ spec:
       containers:
         - name: 5gc
           image: quay.io/kschinck/docker_5gc:20260205
+          workingDir: /open5gs
           command: ["5gc", "-c", "open5gs-5gc.yml"]
           ports:
             - containerPort: 9999

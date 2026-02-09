@@ -475,7 +475,7 @@ spec:
           command:
             - /bin/sh
             - -c
-            - envsubst < open5gs-5gc.yml.in > open5gs-5gc.yml && exec 5gc -c open5gs-5gc.yml
+            - envsubst < /open5gs/open5gs-5gc.yml.in > /tmp/open5gs-5gc.yml && exec 5gc -c /tmp/open5gs-5gc.yml
           ports:
             - containerPort: 9999
               name: web

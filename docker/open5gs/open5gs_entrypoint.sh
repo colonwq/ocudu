@@ -11,12 +11,11 @@ export INSTALL_ARCH
 
 envsubst < open5gs-5gc.yml.in > open5gs-5gc.yml
 
-# create dummy interfaces on localhost ip range for open5gs entities to bind to
+# create localhost addresses 127.0.0.2-22 for open5gs entities to bind to
+# use secondary addresses on loopback (works in containers without dummy kernel module)
 for IP in {2..22}
 do
-    ip link add name lo$IP type dummy
-    ip ad ad 127.0.0.$IP/24 dev lo$IP
-    ip link set lo$IP up
+    ip addr add 127.0.0.$IP/8 dev lo 2>/dev/null || true
 done
 
 # run mongodb first so it is ready before webui and 5gc

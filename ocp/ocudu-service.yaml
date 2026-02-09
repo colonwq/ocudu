@@ -487,6 +487,8 @@ spec:
               mountPath: /open5gs/open5gs-5gc.yml.in
               subPath: open5gs-5gc.yml.in
               readOnly: true
+            - name: fivegc-data
+              mountPath: /data
           livenessProbe:
             exec:
               command: ["nc", "-z", "127.0.0.20", "7777"]
@@ -513,6 +515,8 @@ spec:
         - name: fivegc-5gc-yml-in
           configMap:
             name: fivegc-5gc-yml-in
+        - name: fivegc-data
+          emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment

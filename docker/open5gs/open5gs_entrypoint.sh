@@ -32,12 +32,9 @@ done
 export DB_URI="mongodb://${MONGODB_IP}/open5gs"
 cd webui && npm run dev &
 
-# setup ogstun and routing
-python3 setup_tun.py --ip_range ${UE_IP_RANGE}
-if [ $? -ne 0 ]
-then
-    echo "Failed to setup ogstun and routing"
-    exit 1
+# setup ogstun and routing (non-fatal: in OpenShift/Kubernetes TUN may not be available)
+if ! python3 setup_tun.py --ip_range ${UE_IP_RANGE}; then
+    echo "WARNING: Failed to setup ogstun and routing (TUN not available?); continuing without it. UE data plane may not work."
 fi
 
 # Add subscriber data to open5gs mongo db

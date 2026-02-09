@@ -473,7 +473,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: 5gc
-          image: quay.io/kschinck/docker_5gc:20260205
+          image: quay.io/kschinck/docker_5gc:20260209
           workingDir: /open5gs
           # Use image entrypoint so dummy interfaces, MongoDB, envsubst, webui, add_users and 5gc run
           ports:
@@ -540,7 +540,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gnb
-          image: quay.io/kschinck/gnb:20260205
+          image: quay.io/kschinck/gnb:20260209
           command: ["gnb", "-c", "/gnb_config/gnb_config.yml", "-c", "/gnb_compose_config/gnb_compose_config.yml"]
           ports:
             - containerPort: 8001

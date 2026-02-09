@@ -22,7 +22,15 @@ main() {
     local ncores="${3:-$(nproc)}"
 
     cd /tmp
-    curl -L "https://github.com/EttusResearch/uhd/archive/refs/tags/v${uhd_version}.tar.gz" | tar xzf -
+    local tarball="/tmp/uhd-v${uhd_version}.tar.gz"
+    curl -fsSL -o "${tarball}" "https://github.com/EttusResearch/uhd/archive/refs/tags/v${uhd_version}.tar.gz"
+    if [ ! -s "${tarball}" ] || ! file "${tarball}" | grep -qi gzip; then
+        echo >&2 "UHD download failed or not a gzip file (check tag v${uhd_version} exists at https://github.com/EttusResearch/uhd/releases)"
+        [ -s "${tarball}" ] && head -c 500 "${tarball}" >&2 || true
+        exit 1
+    fi
+    tar xzf "${tarball}"
+    rm -f "${tarball}"
 
     # Add missing #include <cstdint> to headers that use uint32_t etc. (GCC 15+ on Fedora 43)
     UHD_TOP=$(ls -d /tmp/uhd-*"${uhd_version}"* 2>/dev/null | head -1)

@@ -53,6 +53,10 @@ then
     exit 1
 fi
 
+echo "Contents of open5gs-5gc.yml:"
+cat open5gs-5gc.yml
+echo "*************"
+
 # Default to 5gc when no args (e.g. OpenShift runs entrypoint with no CMD)
 if [ $# -eq 0 ]; then
     set -- 5gc -c open5gs-5gc.yml

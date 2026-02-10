@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import click
 import ipaddress
 import subprocess
@@ -293,6 +294,21 @@ def setup_firewall_rules(if_name, ip_range_str):
 @click.option("--ip_range", default='10.45.0.0/24', callback=handle_ip_string,
               help="IP range of the TUN interface.")
 def main(if_name, ip_range):
+
+    # TUN/TAP requires /dev/net/tun (and often CAP_NET_ADMIN). Fail with a clear message if missing.
+    if not os.path.exists("/dev/net/tun"):
+        print(
+            "TUN not available: /dev/net/tun not found (tun kernel module or device not present). "
+            "Cannot create TUN interface.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    try:
+        with open("/dev/net/tun", "rb"):
+            pass
+    except OSError as e:
+        print(f"TUN not accessible: /dev/net/tun cannot be opened: {e}", file=sys.stderr)
+        sys.exit(1)
 
     for subnet in range(0, 256):
         if subnet == 0:

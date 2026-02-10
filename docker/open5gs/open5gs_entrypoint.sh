@@ -1,5 +1,6 @@
 #! /bin/bash
 
+set -x #lets get some debug output
 export UE_GATEWAY_IP="${UE_IP_BASE}.1"
 export UE_IP_RANGE="${UE_IP_BASE}.0/24"
 

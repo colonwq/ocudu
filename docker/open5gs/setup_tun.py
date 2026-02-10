@@ -294,7 +294,10 @@ def setup_firewall_rules(if_name, ip_range_str):
               help="IP range of the TUN interface.")
 def main(if_name, ip_range):
 
-    for subnet in range(0,256):
+    for subnet in range(0, 256):
+        if subnet == 0:
+            hosts = list(ip_range.hosts())
+            print(f"ip_range={ip_range!r} ip_range.hosts()={hosts!r} subnet={subnet}", file=sys.stderr)
         # Get the first IP address in the IP range and netmask prefix length
         first_ip_addr = next(ip_range.hosts(), None) + (subnet * 256)
         if not first_ip_addr:

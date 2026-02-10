@@ -58,7 +58,9 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     meson \
     mongodb-org \
     netcat-openbsd \
+    net-tools \
     ninja-build \
+    procps \
     nodejs \
     npm \
     python3-pip \
@@ -105,10 +107,12 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     meson \
     mongo-c-driver-devel \
     mongodb-org \
+    net-tools \
     ninja-build \
     nftables \
     nmap-ncat \
     nodejs \
+    procps-ng \
     openssl-devel \
     python3-pip \
     python3-setuptools \

@@ -36,10 +36,10 @@ main() {
                 python3-pip libnuma-dev pciutils libfdt-dev libatomic1 iproute2
             pip3 install pyelftools || pip3 install --break-system-packages pyelftools
         fi
-    elif [[ "$ID" == "fedora" || "$ID" == "rhel" ]]; then
+    elif [[ "$ID" == "fedora" || "$ID" == "rhel" || "$ID" == "centos" ]]; then
         packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            packages+=(gcc-c++ git libfdt-devel ninja-build numactl-devel pciutils pkg-config python3-pip)
+            packages+=(gcc-c++ git libfdt-devel ninja-build numactl-devel pciutils pkg-config python3-pip xz)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
             packages+=(iproute libatomic libfdt-devel numactl-devel pciutils python3-pip)

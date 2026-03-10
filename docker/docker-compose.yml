@@ -6,8 +6,9 @@
 # the distribution.
 #
 # Build parameters (env or .env):
-#   OS          Base OS: fedora | ubuntu (default: fedora)
-#   OS_VERSION  OS version, e.g. 43 (Fedora) or 24.04 (Ubuntu) (default: 43)
+#   OS          Base OS: fedora | ubuntu | quay.io/centos/centos (default: fedora)
+#   OS_VERSION  OS version, e.g. 43 (Fedora), 24.04 (Ubuntu), stream10 (CentOS 10) (default: 43)
+#   ENABLE_GDB  Set to "1" to install GDB and run gnb under GDB for backtrace on crash (default: unset)
 
 services:
   5gc:
@@ -47,6 +48,7 @@ services:
       args:
         OS: ${OS:-fedora}
         OS_VERSION: ${OS_VERSION:-43}
+        ENABLE_GDB: ${ENABLE_GDB:-}
     # privileged mode is requred only for accessing usb devices
     privileged: true
     # Extra capabilities always required
@@ -75,8 +77,8 @@ services:
     depends_on:
       5gc:
         condition: service_healthy
-    # Command to run into the final container
-    command: gnb -c /gnb_config.yml -c /gnb_compose_config.yml
+    # Args passed to entrypoint (gnb -c ...); set ENABLE_GDB=1 when building to run under GDB
+    command: ["-c", "/gnb_config.yml", "-c", "/gnb_compose_config.yml"]
 
 volumes:
   gnb-storage:

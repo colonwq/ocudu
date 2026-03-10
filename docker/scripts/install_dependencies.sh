@@ -98,7 +98,7 @@ main() {
             packages+=(clang cmake fftw-devel gcc-toolset-11 gcc-toolset-11-gcc-c++ gcc-toolset-12-libatomic-devel git lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            packages+=(curl fftw-devel gcc-toolset-12-libatomic-devel lksctp-tools-devel mbedtls-devel ntpdate yaml-cpp-devel)
+            packages+=(curl fftw-devel gcc-toolset-12-libatomic-devel lksctp-tools-devel mbedtls-devel chrony yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
             packages+=(boost-devel cppzmq-devel libusb1-devel numactl-devel)
@@ -107,13 +107,24 @@ main() {
             dnf -y install "${packages[@]}" && dnf clean all
         fi
 
-    elif [[ "$ID" == "fedora" ]]; then
+    elif [[ "$ID" == "fedora" || "$ID" == "centos" ]]; then
+        # CentOS Stream (e.g. 10) needs CRB + EPEL for gtest-devel, mbedtls-devel, yaml-cpp-devel
+        if [[ "$ID" == "centos" ]]; then
+            dnf -y install 'dnf-command(config-manager)'
+            dnf config-manager --set-enabled crb || true
+            dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+        fi
         packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
             packages+=(clang cmake fftw-devel git gtest-devel lksctp-tools-devel mbedtls-devel which yaml-cpp-devel)
         fi
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            packages+=(curl fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel ntpdate yaml-cpp-devel)
+            # EL10 (CentOS Stream 10, RHEL 10) replaced ntpdate with chrony
+            if [[ "$ID" == "centos" ]]; then
+                packages+=(curl fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel chrony yaml-cpp-devel)
+            else
+                packages+=(curl fftw-devel gtest-devel lksctp-tools-devel mbedtls-devel ntpdate yaml-cpp-devel)
+            fi
         fi
         if [[ "$mode" == "all" || "$mode" == "extra" ]]; then
             packages+=(boost-devel cppzmq-devel libusb1-devel numactl-devel)

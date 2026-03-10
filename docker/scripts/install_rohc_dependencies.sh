@@ -33,7 +33,7 @@ main() {
         if [[ "$mode" == "all" || "$mode" == "run" ]]; then
             : # noop, nothing needed
         fi
-    elif [[ "$ID" == "fedora" || "$ID" == "rhel" ]]; then
+    elif [[ "$ID" == "fedora" || "$ID" == "rhel" || "$ID" == "centos" ]]; then
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
             dnf -y install curl ca-certificates gcc-c++ make xz autoconf automake libtool libpcap-devel libcmocka-devel which
         fi

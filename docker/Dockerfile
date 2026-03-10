@@ -5,22 +5,27 @@
 # forth in the LICENSE file which can be found at the top level of
 # the distribution.
 #
+# Build with CentOS 10 (image from quay.io), from repo root (MARCH defaults to x86-64-v2 for portability):
+#   podman build --build-arg OS=quay.io/centos/centos --build-arg OS_VERSION=stream10 -f docker/Dockerfile -t ocudu/gnb:centos10 .
 
 # Build args
 ################
-# OS                    Base OS: fedora | ubuntu (default: fedora)
-# OS_VERSION            OS version, e.g. 43 (Fedora) or 24.04 (Ubuntu) (default: 43)
+# OS                    Base OS: fedora | ubuntu | quay.io/centos/centos (default: fedora)
+# OS_VERSION            OS version, e.g. 43 (Fedora), 24.04 (Ubuntu), stream10 (CentOS 10 from quay.io) (default: 43)
 # UHD_VERSION           UHD version number
 # DPDK_VERSION          DPDK version number
-# MARCH                 gcc/clang compatible arch
+# MARCH                 gcc/clang compatible -march (default: x86-64-v2 for portable images).
+#                       Use MARCH=native only if the image runs on the same CPU as build;
+#                       otherwise SIGILL (Illegal instruction) can occur on older cluster nodes.
 # NUM_JOBS              Number or empty for all
 # EXTRA_CMAKE_ARGS      Extra flags for OCUDU
+# ENABLE_GDB            Set to non-empty (e.g. "1") to install GDB and run gnb under GDB via entrypoint for backtrace on crash (default: unset)
 
 ARG OS=fedora
 ARG OS_VERSION=43
 ARG UHD_VERSION=4.7.0.0
 ARG DPDK_VERSION=24.11.2
-ARG MARCH=native
+ARG MARCH=x86-64-v2
 ARG NUM_JOBS=""
 
 ##################
@@ -103,6 +108,8 @@ FROM ${OS}:${OS_VERSION} AS runtime
 
 ARG UHD_VERSION
 ARG DPDK_VERSION
+# ENABLE_GDB: set to non-empty (e.g. "1") to install GDB and run gnb under GDB via entrypoint for backtrace on crash
+ARG ENABLE_GDB=""
 
 # Copy OCUDU binaries and libraries installed in previous stage(s)
 COPY --from=builder /opt/rohc                 /opt/rohc
@@ -110,24 +117,34 @@ COPY --from=builder /opt/uhd/${UHD_VERSION}   /opt/uhd/${UHD_VERSION}
 COPY --from=builder /opt/dpdk/${DPDK_VERSION} /opt/dpdk/${DPDK_VERSION}
 COPY --from=builder /opt/srs                  /usr/local
 
-# Copy the install dependencies scripts
+# Copy the install dependencies scripts and entrypoint
 ADD docker/scripts/install_rohc_dependencies.sh /usr/local/etc/install_rohc_dependencies.sh
 ADD docker/scripts/install_uhd_dependencies.sh  /usr/local/etc/install_uhd_dependencies.sh
 ADD docker/scripts/install_dpdk_dependencies.sh /usr/local/etc/install_dpdk_dependencies.sh
 ADD docker/scripts/install_dependencies.sh      /usr/local/etc/install_ocudu_dependencies.sh
+COPY docker/scripts/gnb_entrypoint.sh           /usr/local/bin/gnb_entrypoint.sh
+RUN chmod +x /usr/local/bin/gnb_entrypoint.sh
+
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rohc/lib/
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/uhd/${UHD_VERSION}/lib/:/opt/uhd/${UHD_VERSION}/lib/x86_64-linux-gnu/:/opt/uhd/${UHD_VERSION}/lib/aarch64-linux-gnu/
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/dpdk/${DPDK_VERSION}/lib/:/opt/dpdk/${DPDK_VERSION}/lib64/:/opt/dpdk/${DPDK_VERSION}/lib/x86_64-linux-gnu/:/opt/dpdk/${DPDK_VERSION}/lib/aarch64-linux-gnu/
 ENV PATH=$PATH:/opt/uhd/${UHD_VERSION}/bin/:/opt/dpdk/${DPDK_VERSION}/bin/
+ENV ENABLE_GDB=$ENABLE_GDB
 
 # Ensure UHD images directory exists (bind-mount from host can override)
 RUN mkdir -p /usr/share/uhd/images
 
-# Install ocudu and lib runtime dependencies
+# Install ocudu and lib runtime dependencies; optionally GDB when ENABLE_GDB is set
 RUN bash /usr/local/etc/install_ocudu_dependencies.sh run && \
     bash /usr/local/etc/install_rohc_dependencies.sh run && \
     bash /usr/local/etc/install_uhd_dependencies.sh run && \
-    bash /usr/local/etc/install_dpdk_dependencies.sh run
+    bash /usr/local/etc/install_dpdk_dependencies.sh run && \
+    if [ -n "$ENABLE_GDB" ]; then \
+      . /etc/os-release && if [ "$ID" = "fedora" ] || [ "$ID" = "rhel" ] || [ "$ID" = "centos" ]; then dnf -y install gdb && dnf clean all; else DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends gdb && apt-get clean && rm -rf /var/lib/apt/lists/*; fi; \
+    fi
+
+ENTRYPOINT ["/usr/local/bin/gnb_entrypoint.sh"]
+CMD ["-c", "/gnb_config.yml", "-c", "/gnb_compose_config.yml"]
 
 #########################################################
 # Stage 3: Generate container SPDX and merge build SPDX #

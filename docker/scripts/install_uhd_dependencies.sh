@@ -40,7 +40,7 @@ main() {
                 apt-get autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*
             uhd_images_downloader
         fi
-    elif [[ "$ID" == "fedora" || "$ID" == "rhel" ]]; then
+    elif [[ "$ID" == "fedora" || "$ID" == "rhel" || "$ID" == "centos" ]]; then
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
             dnf -y install cmake gcc-c++ pkg-config boost-devel libusb1-devel \
                 python3-mako python3-numpy python3-setuptools python3-requests

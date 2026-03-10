@@ -79,6 +79,121 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.split.yml -
 
 If you're not familiarized with `docker compose` tool, it will be recommended to check its [website](https://docs.docker.com/compose/) and `docker compose --help` output.
 
+## Building for different base OS
+
+The gNB image supports Fedora, RHEL, CentOS (from quay.io), and Ubuntu. Set build args `OS` and `OS_VERSION` (or use the defaults: Fedora 43).
+
+**Build with CentOS 10 (base image from quay.io), from the repository root:**
+
+```bash
+podman build \
+  --build-arg OS=quay.io/centos/centos \
+  --build-arg OS_VERSION=stream10 \
+  -f docker/Dockerfile \
+  -t ocudu/gnb:centos10 \
+  .
+```
+
+With docker-compose, use env vars so the same Dockerfile is used:
+
+```bash
+OS=quay.io/centos/centos OS_VERSION=stream10 docker compose -f docker/docker-compose.yml build gnb
+```
+
+## SIGILL (Illegal instruction) on deployment
+
+If the gNB crashes with **SIGILL** (Illegal instruction) when run in a cluster but not on your build host, the image was built with **MARCH=native** (or a CPU-specific march) and is using instructions not available on the cluster nodes. Rebuild the image with a **portable** march so it runs on typical x86_64 nodes:
+
+```bash
+podman build \
+  --build-arg MARCH=x86-64-v2 \
+  --build-arg OS=quay.io/centos/centos \
+  --build-arg OS_VERSION=stream10 \
+  -f docker/Dockerfile \
+  -t quay.io/<your-org>/gnb:<tag> \
+  .
+```
+
+The default `MARCH` in the Dockerfile is now **x86-64-v2** (portable). Use `MARCH=native` only if the image will run on the same CPU architecture as the build host.
+
+## Debugging segfaults and crashes
+
+If the gNB process segfaults (e.g. after deploying the image from Quay via Helm), use the following to track down the cause.
+
+### 1. Check pod logs
+
+The build enables **ENABLE_BACKWARD** by default, which can print a stack trace on crash. Inspect the pod logs before the restart:
+
+```bash
+kubectl logs <pod-name> -c <gnb-container-name> --previous
+```
+
+(or `oc logs` on OpenShift). Look for a backtrace or "Segmentation fault" and any lines above it.
+
+### 2. Enable core dumps and persist them
+
+To capture a core file in the cluster, enable core dumps and write them to a directory that is persisted (e.g. emptyDir or a volume). In your Helm values or Deployment, you can:
+
+- Set **securityContext** so core dumps are allowed and a pattern is set, and increase core size:
+  - `ulimits` (if your runtime supports it) or an init container that runs `ulimit -c unlimited` and then exec's the main process.
+- Run the process with a **wrapper** that sets `ulimit -c unlimited` and `echo /tmp/core.%e.%p | tee /proc/sys/kernel/core_pattern` (if you have permission), then start gnb.
+- Mount a **volume** on `/tmp` or `/core` and ensure the core pattern writes there (e.g. `/core/core.%e.%p`).
+
+Then copy the core out before the pod is recreated:
+
+```bash
+kubectl cp <namespace>/<pod-name>:/tmp/core.12345 /tmp/core.12345 -c <gnb-container-name>
+```
+
+Analyze it later with `gdb` and a binary built with debug info (see below).
+
+### 3. Build a debug image (with symbols)
+
+Build an image with debug symbols so stack traces and core dumps are readable. From the repo root:
+
+```bash
+podman build \
+  --build-arg OS=quay.io/centos/centos \
+  --build-arg OS_VERSION=stream10 \
+  --build-arg EXTRA_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" \
+  -f docker/Dockerfile \
+  -t quay.io/<your-org>/gnb:debug \
+  .
+```
+
+Push this image and deploy it (e.g. override the image in Helm to `gnb:debug`). Crashes and core dumps from this image will have symbol information.
+
+### 4. Run under GDB via ENABLE_GDB build arg and entrypoint (recommended)
+
+Build the image with **ENABLE_GDB=1** to install GDB; the image entrypoint then runs gnb under GDB in batch mode so a backtrace is printed to the pod log on crash (SIGSEGV, SIGILL, etc.): `podman build --build-arg ENABLE_GDB=1 -f docker/Dockerfile -t quay.io/<your-org>/gnb:debug .` or `ENABLE_GDB=1 docker compose -f docker/docker-compose.yml build gnb`. The entrypoint (`gnb_entrypoint.sh`) checks the `ENABLE_GDB` env var and runs either `gdb -batch ... --args /usr/local/bin/gnb "$@"` or `gnb "$@"`. Pass gnb args as the container command; no need to override with a full gdb command.
+
+To catch the segfault interactively with a custom image, either:
+
+- **Option A – custom debug image with GDB:** In the Dockerfile’s runtime stage, add `RUN dnf -y install gdb && dnf clean all` (or the equivalent for your base), build and push that image, then override the pod command to run under GDB, e.g.:
+
+```yaml
+command: ["gdb", "-batch", "-ex", "run", "-ex", "bt full", "-ex", "quit", "--args", "/usr/local/bin/gnb", "-c", "/gnb_config.yml", "-c", "/gnb_compose_config.yml"]
+```
+
+- **Option B – one-off debug pod:** Start a pod with the same image, config, and volumes but with a shell. Install GDB inside the container if the base has a package manager and network, then run:
+
+```bash
+gdb -ex run --args /usr/local/bin/gnb -c /gnb_config.yml -c /gnb_compose_config.yml
+```
+
+When it segfaults, run `bt full` in GDB for a full backtrace.
+
+### 5. Reproduce locally
+
+Reproduce with the same image and config to see if the crash is environment-specific (e.g. security context, CPU/memory limits, or missing device/config):
+
+```bash
+podman run -it --rm quay.io/<your-org>/gnb:<tag> \
+  gnb -c /gnb_config.yml -c /gnb_compose_config.yml
+```
+
+Use the same config files (mount them or copy in) and, if relevant, similar resource limits.
+
 ## Configuration
 
 ### Enabling metrics reporting in the gNB

@@ -3,6 +3,8 @@
 set -x #lets get some debug output
 export UE_GATEWAY_IP="${UE_IP_BASE}.1"
 export UE_IP_RANGE="${UE_IP_BASE}.0/24"
+# Set to non-zero (e.g. 1) to run TUN setup; default 0, overridable at execution via env
+SETUP_TUN="${SETUP_TUN:-0}"
 
 INSTALL_ARCH=x86_64-linux-gnu
 if [ "$(uname -m)" = "aarch64" ]; then
@@ -33,16 +35,12 @@ done
 export DB_URI="mongodb://${MONGODB_IP}/open5gs"
 cd webui && npm run dev &
 
-sleep 10
-echo "Process list:" 
-echo "*************"
-ps -e f
-echo "*************"
-
 # setup ogstun and routing (non-fatal: in OpenShift/Kubernetes TUN may not be available)
-# if ! python3  setup_tun.py --ip_range ${UE_IP_RANGE}; then
-#     echo "WARNING: Failed to setup ogstun and routing (TUN not available?); continuing without it. UE data plane may not work."
-# fi
+if [ "$SETUP_TUN" != "0" ]; then
+    if ! python3 setup_tun.py --ip_range ${UE_IP_RANGE}; then
+        echo "WARNING: Failed to setup ogstun and routing (TUN not available?); continuing without it. UE data plane may not work."
+    fi
+fi
 
 # Add subscriber data to open5gs mongo db
 echo "SUBSCRIBER_DB=${SUBSCRIBER_DB}"
@@ -52,10 +50,6 @@ then
     echo "Failed to add subscribers to database"
     exit 1
 fi
-
-echo "Contents of open5gs-5gc.yml:"
-cat open5gs-5gc.yml
-echo "*************"
 
 # Default to 5gc when no args (e.g. OpenShift runs entrypoint with no CMD)
 if [ $# -eq 0 ]; then

@@ -77,6 +77,7 @@ RUN if [ "$OS" = "ubuntu" ]; then \
     && echo "gpgcheck=1" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "enabled=1" >> /etc/yum.repos.d/mongodb-org.repo \
     && echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mongodb" >> /etc/yum.repos.d/mongodb-org.repo \
+    && ( . /etc/os-release && if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "10" ]; then dnf install -y 'dnf-command(config-manager)' && dnf config-manager --set-enabled crb || true; printf '%s\n' '[ubi-10-codeready-builder]' 'name=Red Hat Universal Base Image 10 - CodeReady Builder' 'baseurl=https://cdn-ubi.redhat.com/content/public/ubi/dist/ubi10/10/$basearch/codeready-builder/os' 'enabled=1' 'gpgcheck=1' 'gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release' > /etc/yum.repos.d/ubi10-crb.repo; dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm; fi ) \
     && dnf install -y \
     bison \
     cmake \

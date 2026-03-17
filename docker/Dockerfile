@@ -45,8 +45,6 @@ RUN bash /src/docker/scripts/install_dependencies.sh build && \
     bash /src/docker/scripts/install_uhd_dependencies.sh build && \
     bash /src/docker/scripts/install_dpdk_dependencies.sh build
 
-
-
 FROM builder-base AS builder-rohc
 
 ARG MARCH

@@ -37,6 +37,12 @@ main() {
             pip3 install pyelftools || pip3 install --break-system-packages pyelftools
         fi
     elif [[ "$ID" == "fedora" || "$ID" == "rhel" || "$ID" == "centos" ]]; then
+        if [[ "$ID" == "rhel" && "${VERSION_ID:-0}" == 10* ]]; then
+            local rhsm_script_dir
+            rhsm_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+            export RHSM_SECRET_FILE="${RHSM_SECRET_FILE:-/run/secrets/rhsm_build_creds}"
+            bash "$rhsm_script_dir/with_rhsm_rhel10.sh" bash -c ':'
+        fi
         packages=()
         if [[ "$mode" == "all" || "$mode" == "build" ]]; then
             packages+=(gcc-c++ git libfdt-devel ninja-build numactl-devel pciutils pkg-config python3-pip xz)

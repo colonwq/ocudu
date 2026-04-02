@@ -7,53 +7,43 @@
 # the distribution.
 #
 
-set -e # stop executing after error
+#
+# This script will install UHD dependencies
+#
+# Run like this: ./install_uhd_dependencies.sh [<mode>]
+# E.g.: ./install_uhd_dependencies
+# E.g.: ./install_uhd_dependencies build
+# E.g.: ./install_uhd_dependencies run
+# E.g.: ./install_uhd_dependencies all
+#
 
-main() {
+set -e
 
-    # Check number of args
-    if [ $# != 0 ] && [ $# != 1 ]; then
-        echo >&2 "Illegal number of parameters"
-        echo >&2 "Run like this: \"./install_uhd_dependencies.sh [<mode>]\" where mode could be: build, run and all"
-        echo >&2 "If mode is not specified, all dependencies will be installed"
-        exit 1
-    fi
+# Check number of args
+if [ $# != 0 ] && [ $# != 1 ]; then
+    echo >&2 "Illegal number of parameters"
+    echo >&2 "Run like this: \"./install_uhd_dependencies.sh [<mode>]\" where mode could be: build, run and all"
+    echo >&2 "If mode is not specified, all dependencies will be installed"
+    exit 1
+fi
 
-    local mode="${1:-all}"
+mode="${1:-all}"
+# shellcheck source=/dev/null
+. /etc/os-release
 
-    # shellcheck source=/dev/null
-    . /etc/os-release
+echo "== Installing UHD dependencies, mode $mode =="
 
-    if [[ "$ID" == "debian" || "$ID" == "ubuntu" ]]; then
-        if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-                curl apt-transport-https ca-certificates xz-utils \
-                cmake build-essential pkg-config \
-                libboost-all-dev libusb-1.0-0-dev \
-                python3-mako python3-numpy python3-setuptools python3-requests
+script_dir="$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")"
 
-        fi
-        if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-                cpufrequtils inetutils-tools libboost-all-dev libncurses5-dev libusb-1.0-0 libusb-1.0-0-dev \
-                libusb-dev python3-dev python3-requests &&
-                apt-get autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*
-            uhd_images_downloader
-        fi
-    elif [[ "$ID" == "fedora" || "$ID" == "rhel" || "$ID" == "centos" ]]; then
-        if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            dnf -y install cmake gcc-c++ pkg-config boost-devel libusb1-devel \
-                python3-mako python3-numpy python3-setuptools python3-requests
-        fi
-        if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            dnf -y install boost-devel ncurses-devel libusb1 libusb1-devel python3-requests uhd uhd-devel
-            uhd_images_downloader
-        fi
-    else
-        echo "OS $ID not supported"
-        exit 1
-    fi
-
-}
-
-main "$@"
+if [[ "$ID" == "debian" || "$ID" == "ubuntu" ]]; then
+    bash "$script_dir/install_uhd_ubuntu_dependencies.sh" "$mode"
+elif [[ "$ID" == "arch" ]]; then
+    bash "$script_dir/install_uhd_arch_dependencies.sh" "$mode"
+elif [[ "$ID" == "rhel" ]]; then
+    bash "$script_dir/install_uhd_rhel_dependencies.sh" "$mode"
+elif [[ "$ID" == "fedora" || "$ID" == "centos" ]]; then
+    bash "$script_dir/install_uhd_fedora_dependencies.sh" "$mode"
+else
+    echo "OS $ID not supported"
+    exit 1
+fi

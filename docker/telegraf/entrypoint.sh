@@ -13,7 +13,13 @@ if [ -n "$RETINA_PORTS" ]; then
   # In this mode, we expect to receive data over UDP, telling websocket ip/port of the server.
   export WS_URL=$(socat -u UDP-RECVFROM:"${RETINA_PORTS}",reuseaddr STDOUT)
 fi
-telegraf --config /etc/ocudu/telegraf.conf $TELEGRAF_CLI_EXTRA_ARGS &
+
+telegraf_configs=(--config /etc/ocudu/telegraf.conf)
+if [ -n "${PROMETHEUS_REMOTE_WRITE_URL:-}" ]; then
+  telegraf_configs+=(--config /etc/ocudu/telegraf-ocp-remote-write.conf)
+fi
+
+telegraf "${telegraf_configs[@]}" $TELEGRAF_CLI_EXTRA_ARGS &
 child=$!
 
 health_code=0

@@ -7,44 +7,43 @@
 # the distribution.
 #
 
-set -e # stop executing after error
+#
+# This script will install ROHC dependencies
+#
+# Run like this: ./install_rohc_dependencies.sh [<mode>]
+# E.g.: ./install_rohc_dependencies
+# E.g.: ./install_rohc_dependencies build
+# E.g.: ./install_rohc_dependencies run
+# E.g.: ./install_rohc_dependencies all
+#
 
-main() {
+set -e
 
-    # Check number of args
-    if [ $# != 0 ] && [ $# != 1 ]; then
-        echo >&2 "Illegal number of parameters"
-        echo >&2 "Run like this: \"./install_rohc_dependencies.sh [<mode>]\" where mode could be: build, run and all"
-        echo >&2 "If mode is not specified, all dependencies will be installed"
-        exit 1
-    fi
+# Check number of args
+if [ $# != 0 ] && [ $# != 1 ]; then
+    echo >&2 "Illegal number of parameters"
+    echo >&2 "Run like this: \"./install_rohc_dependencies.sh [<mode>]\" where mode could be: build, run and all"
+    echo >&2 "If mode is not specified, all dependencies will be installed"
+    exit 1
+fi
 
-    local mode="${1:-all}"
+mode="${1:-all}"
+# shellcheck source=/dev/null
+. /etc/os-release
 
-    # shellcheck source=/dev/null
-    . /etc/os-release
+echo "== Installing ROHC dependencies, mode $mode =="
 
-    if [[ "$ID" == "debian" || "$ID" == "ubuntu" ]]; then
-        if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-                curl ca-certificates build-essential xz-utils autotools-dev automake libtool libpcap-dev libcmocka-dev
+script_dir="$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")"
 
-        fi
-        if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            : # noop, nothing needed
-        fi
-    elif [[ "$ID" == "fedora" || "$ID" == "rhel" || "$ID" == "centos" ]]; then
-        if [[ "$mode" == "all" || "$mode" == "build" ]]; then
-            dnf -y install curl ca-certificates gcc-c++ make xz autoconf automake libtool libpcap-devel libcmocka-devel which
-        fi
-        if [[ "$mode" == "all" || "$mode" == "run" ]]; then
-            : # noop, nothing needed
-        fi
-    else
-        echo "OS $ID not supported"
-        exit 1
-    fi
-
-}
-
-main "$@"
+if [[ "$ID" == "debian" || "$ID" == "ubuntu" ]]; then
+    bash "$script_dir/install_rohc_ubuntu_dependencies.sh" "$mode"
+elif [[ "$ID" == "arch" ]]; then
+    bash "$script_dir/install_rohc_arch_dependencies.sh" "$mode"
+elif [[ "$ID" == "rhel" ]]; then
+    bash "$script_dir/install_rohc_rhel_dependencies.sh" "$mode"
+elif [[ "$ID" == "fedora" || "$ID" == "centos" ]]; then
+    bash "$script_dir/install_rohc_fedora_dependencies.sh" "$mode"
+else
+    echo "OS $ID not supported"
+    exit 1
+fi

@@ -100,6 +100,21 @@ With docker-compose, use env vars so the same Dockerfile is used:
 OS=quay.io/centos/centos OS_VERSION=stream10 docker compose -f docker/docker-compose.yml build gnb
 ```
 
+**RHEL 10 UBI with Red Hat subscription (optional CodeReady Builder via `subscription-manager`):**  
+If the public UBI CodeReady Builder CDN is not enough for your environment, you can pass Red Hat Network credentials as a **build secret** so they are not baked into the image layers and are never committed to git. Create a local env-style file (see `docker/rhsm.build.env.example` for the variable names), keep it out of version control, then build from the repository root:
+
+```bash
+podman build \
+  --secret id=rhsm_build_creds,src="${HOME}/rhsm.build.env" \
+  --build-arg OS=registry.access.redhat.com/ubi10/ubi \
+  --build-arg OS_VERSION=latest \
+  -f docker/Dockerfile \
+  -t ocudu/gnb:ubi10 \
+  .
+```
+
+The Dockerfile mounts that secret as `rhsm_build_creds` and sets `RHSM_SECRET_FILE=/run/secrets/rhsm_build_creds` on the relevant `RUN` lines; install scripts invoke `with_rhsm_rhel10.sh` only on RHEL 10. Without `--secret`, or with an empty file, the image build still uses the public UBI CRB repo where applicable.
+
 ## SIGILL (Illegal instruction) on deployment
 
 If the gNB crashes with **SIGILL** (Illegal instruction) when run in a cluster but not on your build host, the image was built with **MARCH=native** (or a CPU-specific march) and is using instructions not available on the cluster nodes. Rebuild the image with a **portable** march so it runs on typical x86_64 nodes:
@@ -212,6 +227,18 @@ remote_control:
 ```
 
 `gnb` and `du` services already have those options configured in their respective docker-compose.yml files.
+
+### Telegraf metrics and Grafana on OpenShift (OCP)
+
+**Grafana is not a metrics ingest endpoint.** It visualizes data from a time-series store (here: InfluxDB 3 in `docker-compose.ui.yml`). To use **Grafana running on OCP**, point Telegraf (or the whole pipeline) at the **same backend** that your OCP Grafana instance uses, or add a second output.
+
+1. **InfluxDB 3 on OCP (or reachable from the cluster)**  
+   Set `INFLUXDB3_EXTERNAL_URL` (and token/bucket if required) on the Telegraf workload to the InfluxDB 3 HTTP URL—for example a `Service` DNS name like `http://influxdb3.my-namespace.svc:8081` or an OpenShift `Route`. In OCP Grafana, add an **InfluxDB** datasource with the same server and bucket. No change to `telegraf.conf` is required beyond environment variables.
+
+2. **Prometheus remote write (Mimir, Thanos receive, User Workload Monitoring, etc.)**  
+   If OCP Grafana reads **Prometheus** or **Mimir**, configure Telegraf to **remote-write** to that stack’s ingest URL. When `PROMETHEUS_REMOTE_WRITE_URL` is non-empty, the Telegraf entrypoint loads `docker/telegraf/telegraf-ocp-remote-write.conf` in addition to `telegraf.conf` (see commented examples in `docker/.env`). Adjust the URL to your distributor/gateway (often ending in `/api/v1/push`). Optional HTTP basic auth can be enabled by uncommenting the username/password lines in that file and setting the matching env vars.
+
+You can use **both** the existing Influx output and remote write if you want local Compose Grafana and OCP dashboards at the same time.
 
 ### Customizations
 

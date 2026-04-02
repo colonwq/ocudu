@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 #
 # Copyright 2021-2026 Software Radio Systems Limited
 #
@@ -7,6 +8,12 @@
 #
 # Build with CentOS 10 (image from quay.io), from repo root (MARCH defaults to x86-64-v2 for portability):
 #   podman build --build-arg OS=quay.io/centos/centos --build-arg OS_VERSION=stream10 -f docker/Dockerfile -t ocudu/gnb:centos10 .
+#
+# RHEL/UBI 10 only: to use subscription-manager (instead of the public UBI CRB CDN repo), pass a BuildKit secret
+# (never commit credentials; they are not stored in image layers when using --secret):
+#   podman build --secret id=rhsm_build_creds,src=$HOME/rhsm.build.env \
+#     --build-arg OS=registry.access.redhat.com/ubi10/ubi --build-arg OS_VERSION=latest -f docker/Dockerfile -t ocudu/gnb:ubi10 .
+# See docker/rhsm.build.env.example for the variables expected inside the secret file.
 
 # Build args
 ################
@@ -40,8 +47,10 @@ ADD . /src
 # RUN apt update && apt-get install -y --no-install-recommends git ca-certificates
 # RUN git clone https://github.com/ocudu/OCUDU_Project.git /src
 
-# Install OCUDU build dependencies
-RUN bash /src/docker/scripts/install_dependencies.sh build && \
+# Install OCUDU build dependencies (optional RHSM secret on RHEL 10 — see with_rhsm_rhel10.sh / header comment)
+RUN --mount=type=secret,id=rhsm_build_creds,required=false \
+    RHSM_SECRET_FILE=/run/secrets/rhsm_build_creds \
+    bash /src/docker/scripts/install_dependencies.sh build && \
     bash /src/docker/scripts/install_uhd_dependencies.sh build && \
     bash /src/docker/scripts/install_dpdk_dependencies.sh build
 
@@ -51,7 +60,9 @@ ARG MARCH
 ARG NUM_JOBS
 
 # Install ROHC build deps and compile in same RUN so aclocal/automake are on PATH
-RUN bash /src/docker/scripts/install_rohc_dependencies.sh build && \
+RUN --mount=type=secret,id=rhsm_build_creds,required=false \
+    RHSM_SECRET_FILE=/run/secrets/rhsm_build_creds \
+    bash /src/docker/scripts/install_rohc_dependencies.sh build && \
     bash /src/docker/scripts/build_rohc.sh ${MARCH} ${NUM_JOBS}
 
 
@@ -117,9 +128,22 @@ COPY --from=builder /opt/srs                  /usr/local
 
 # Copy the install dependencies scripts and entrypoint
 ADD docker/scripts/install_rohc_dependencies.sh /usr/local/etc/install_rohc_dependencies.sh
+ADD docker/scripts/install_rohc_ubuntu_dependencies.sh /usr/local/etc/install_rohc_ubuntu_dependencies.sh
+ADD docker/scripts/install_rohc_fedora_dependencies.sh /usr/local/etc/install_rohc_fedora_dependencies.sh
+ADD docker/scripts/install_rohc_rhel_dependencies.sh /usr/local/etc/install_rohc_rhel_dependencies.sh
+ADD docker/scripts/install_rohc_arch_dependencies.sh /usr/local/etc/install_rohc_arch_dependencies.sh
 ADD docker/scripts/install_uhd_dependencies.sh  /usr/local/etc/install_uhd_dependencies.sh
+ADD docker/scripts/install_uhd_ubuntu_dependencies.sh /usr/local/etc/install_uhd_ubuntu_dependencies.sh
+ADD docker/scripts/install_uhd_fedora_dependencies.sh /usr/local/etc/install_uhd_fedora_dependencies.sh
+ADD docker/scripts/install_uhd_rhel_dependencies.sh /usr/local/etc/install_uhd_rhel_dependencies.sh
+ADD docker/scripts/install_uhd_arch_dependencies.sh /usr/local/etc/install_uhd_arch_dependencies.sh
 ADD docker/scripts/install_dpdk_dependencies.sh /usr/local/etc/install_dpdk_dependencies.sh
 ADD docker/scripts/install_dependencies.sh      /usr/local/etc/install_ocudu_dependencies.sh
+ADD docker/scripts/install_arch_dependencies.sh /usr/local/etc/install_arch_dependencies.sh
+ADD docker/scripts/install_fedora_dependencies.sh /usr/local/etc/install_fedora_dependencies.sh
+ADD docker/scripts/install_rhel_dependencies.sh /usr/local/etc/install_rhel_dependencies.sh
+ADD docker/scripts/install_ubuntu_dependencies.sh /usr/local/etc/install_ubuntu_dependencies.sh
+ADD docker/scripts/with_rhsm_rhel10.sh          /usr/local/etc/with_rhsm_rhel10.sh
 COPY docker/scripts/gnb_entrypoint.sh           /usr/local/bin/gnb_entrypoint.sh
 RUN chmod +x /usr/local/bin/gnb_entrypoint.sh
 
@@ -133,7 +157,9 @@ ENV ENABLE_GDB=$ENABLE_GDB
 RUN mkdir -p /usr/share/uhd/images
 
 # Install ocudu and lib runtime dependencies; optionally GDB when ENABLE_GDB is set
-RUN bash /usr/local/etc/install_ocudu_dependencies.sh run && \
+RUN --mount=type=secret,id=rhsm_build_creds,required=false \
+    RHSM_SECRET_FILE=/run/secrets/rhsm_build_creds \
+    bash /usr/local/etc/install_ocudu_dependencies.sh run && \
     bash /usr/local/etc/install_rohc_dependencies.sh run && \
     bash /usr/local/etc/install_uhd_dependencies.sh run && \
     bash /usr/local/etc/install_dpdk_dependencies.sh run && \

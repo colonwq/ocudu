@@ -1,0 +1,3 @@
+# Local Red Hat subscription-manager credentials for image builds (never commit)
+rhsm.build.env
+*.rhsm.env
